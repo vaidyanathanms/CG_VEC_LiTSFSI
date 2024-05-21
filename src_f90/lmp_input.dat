@@ -1,0 +1,25 @@
+ Data file generated for simulation is VECdata30.dat
+ Simulation inputs ....
+ ----------System level details-------------------
+ Total particles:         4200
+ Total blobs:         7200
+ Total # of polymer chains:          100
+ Total # of anion blobs:          600
+ Total # of cations:          600
+ ----------Chain level details--------------------
+ # of CG blob per polymer monomer:            2
+ Ratio between anions and VEC mons per chain:   0.200000003    
+ # of blobs per chain:           66
+ # of anion blobs per chain:          600
+ ----------Box details----------------------------
+ LX/LY/LZ:    17.3801346       17.3801346       17.3801346    
+ Box volume:    5250.00000    
+ Density:   0.800000012    
+ ----------Topology details-----------------------
+ Number of atomtypes:            4
+ Number of bondtypes:            4
+ Number of angletypes:            0
+ Random Initial Configuration : NRRW
+ Generating chain configurations .. 
+ Good Charge Neutrality    0.00000000    
+ Successfully Written Datafile ..
