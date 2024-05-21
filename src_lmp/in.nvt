@@ -1,0 +1,40 @@
+#####################################################
+# Stage 3: Run using Nose-Hoover NVT                #
+# Version: May-20-2024                              #
+#####################################################
+
+
+# Initialization
+units		lj
+boundary	p p f
+atom_style	full
+log 		log.txt
+read_restart	restart1
+
+# Neighbor information
+neighbor        0.3 bin
+neigh_modify	every 10 one 10000
+
+#####################################################
+# Equilibration (NVT dynamics at kT=1)
+#####################################################
+
+# Initiate/Write Atoms and Other Details
+variable        ts equal step
+thermo_style	custom step temp pe
+thermo          10000
+dump            main all custom 10000 config_${ts}.lammpstrj id type xu yu zu
+
+# Main Fixes - NVT
+fix 1 all nvt temp 1.0 1.0 0.5
+
+# Run Styles
+run_style verlet
+restart   5000 restart1 restart2
+restart   500000 archival_*.restart
+timestep  0.01
+run	  5000000
+unfix 1
+write_restart 	restart_NVT.dat
+
+

@@ -1,0 +1,45 @@
+#####################################################
+# Stage 2: Run using Langevin NVE                   #
+# Version: May-20-2024                              #
+#####################################################
+
+# Initialization
+units		lj
+boundary	p p p
+atom_style	full
+log 		log.txt
+read_restart	restart1
+
+# Neighbor information
+neighbor        0.3 bin
+neigh_modify	every 10 one 10000
+
+#####################################################
+# Equilibration (Langevin dynamics at kT=1)
+#####################################################
+
+# Initiate/Write Atoms and Other Details
+variable        ts equal step
+velocity        all set 0.0 0.0 0.0
+velocity        all create 1 1231 mom yes
+write_data      init_config.data
+thermo_style	custom step temp pe
+thermo          10000
+dump            main all custom 10000 config_${ts}.lammpstrj id type xu yu zu
+
+# Main Fixes - NVE
+fix  1 all langevin 1 1 6.99 904297
+fix  2 all nve
+
+# Run Styles
+run_style verlet
+restart   5000 restart1 restart2
+restart   500000 archival_*.restart
+timestep  0.005
+run	  1000000
+
+unfix 1
+unfix 2
+write_restart 	restart_NVE.dat
+
+

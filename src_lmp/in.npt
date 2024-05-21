@@ -1,0 +1,33 @@
+#####################################################
+# Stage 4: Main run using Nose-Hoover NPT           #
+# Version: May-20-2024                              #
+#####################################################
+
+# Initialization
+units		lj
+boundary	p p f
+atom_style	full
+log 		log.txt
+read_restart	restart1
+
+# Neighbor information
+neighbor        0.3 bin
+neigh_modify	every 10 one 10000
+
+# Initiate/Write Atoms and Other Details
+variable        ts equal step
+thermo_style	custom step temp etotal
+thermo          1000
+dump            main all custom 2500 config_${ts}.lammpstrj id type xu yu zu
+
+# Main Fixes - NPT
+fix 1 all npt temp 1.0 1.0 0.5 iso 2.38 2.38 5.0 #Pressure needs to be checked
+
+# Run Styles
+run_style verlet
+restart   5000 restart1 restart2
+restart   500000 archival_*.restart
+timestep  0.01
+run	  10000000
+unfix 1
+write_restart 	restart_NPT.dat
