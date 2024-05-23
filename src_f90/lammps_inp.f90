@@ -101,6 +101,8 @@ SUBROUTINE LMP_COORD()
   
 !!$Fetching image information
 
+  ixyz = 0 ! If I don't assign, errors may creep
+  
   DO i = 1,N_poly
      
      k = (i-1)*blob_per_ch + 1
@@ -133,6 +135,7 @@ SUBROUTINE LMP_COORD()
               CALL IMGFLAGS(ry,ixyz(k,2),boxl_y,ixyz(k+1,2))
               CALL IMGFLAGS(rz,ixyz(k,3),boxl_z,ixyz(k+1,3))
 
+             
            ELSEIF (aidvals(k,2) == 2) THEN
 
               rx = rxyz(k-CG_per_mon+1,1) - rxyz(k+1,1)
@@ -141,11 +144,11 @@ SUBROUTINE LMP_COORD()
               CALL IMGFLAGS(rx,ixyz(k-CG_per_mon+1,1),boxl_x,ixyz(k+1,1))
               CALL IMGFLAGS(ry,ixyz(k-CG_per_mon+1,2),boxl_y,ixyz(k+1,2))
               CALL IMGFLAGS(rz,ixyz(k-CG_per_mon+1,3),boxl_z,ixyz(k+1,3))
-              
+                           
            END IF
 
         END IF
-              
+             
      END DO
      
   END DO
@@ -166,11 +169,28 @@ SUBROUTINE LMP_COORD()
   WRITE (10,*)
 
   DO i = 1,totblobs
-     
-     WRITE(10,'(3(I0,1X),4(F14.6,1X),3(I0,1X))') aidvals(i,1),&
-          & aidvals(i,2), aidvals(i,3), charge(i), rxyz(i,1), rxyz(i&
-          &,2),rxyz(i,3), ixyz(i,1), ixyz(i,2), ixyz(i,3)
+
+     IF(unwrapped .EQV. .false.) THEN !Wrap it and write ix,iy,iz
+        WRITE(10,'(3(I0,1X),4(F14.6,1X),3(I0,1X))') aidvals(i,1),&
+             & aidvals(i,2), aidvals(i,3), charge(i), rxyz(i,1),&
+             & rxyz(i,2),rxyz(i,3), ixyz(i,1), ixyz(i,2), ixyz(i,3)
+
+     ELSE ! Ideally ixyz should be zero
+        WRITE(10,'(3(I0,1X),4(F14.6,1X))') aidvals(i,1),aidvals(i,2),&
+             & aidvals(i,3), charge(i), rxyz(i,1) + boxl_x*ixyz(i,1),&
+             & rxyz(i,2) + boxl_y*ixyz(i,2),rxyz(i,3)+ boxl_z*ixyz(i&
+             &,3)
+
+        IF(ixyz(i,1) .NE. 0 .OR. ixyz(i,2) .NE. 0 .OR. ixyz(i,3) .NE.&
+             & 0) THEN
+           PRINT *, "Long bonds found", i, ixyz(i,1), ixyz(i,2),&
+                & ixyz(i,3)
+           STOP
+        END IF
         
+     END IF
+
+     
   END DO
 
   IF(numbondtypes /= 0) THEN
@@ -579,15 +599,18 @@ SUBROUTINE INPCOR()
         
   END DO
      
-  ! PBC
-  
-  DO i = 1,totblobs
+  IF (unwrapped .EQV. .false.) THEN
+     ! PBC
      
-     rxyz(i,1) = rxyz(i,1) - boxl_x*floor(rxyz(i,1)/boxl_x)
-     rxyz(i,2) = rxyz(i,2) - boxl_y*floor(rxyz(i,2)/boxl_y)
-     rxyz(i,3) = rxyz(i,3) - boxl_z*floor(rxyz(i,3)/boxl_z)
+     DO i = 1,totblobs
         
-  END DO
+        rxyz(i,1) = rxyz(i,1) - boxl_x*floor(rxyz(i,1)/boxl_x)
+        rxyz(i,2) = rxyz(i,2) - boxl_y*floor(rxyz(i,2)/boxl_y)
+        rxyz(i,3) = rxyz(i,3) - boxl_z*floor(rxyz(i,3)/boxl_z)
+        
+     END DO
+
+  END IF
 
   ! Check charge neutrality
   csum = 0.0

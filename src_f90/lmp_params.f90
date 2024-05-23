@@ -23,6 +23,7 @@ MODULE PARAMS
   INTEGER, PARAMETER :: totpart = N_ions + N_poly*M_poly
   INTEGER, PARAMETER :: blob_per_ch = CG_per_mon*M_poly+ideal_an_per_ch
   INTEGER, PARAMETER :: totblobs = N_cations + N_poly*blob_per_ch
+  LOGICAL, PARAMETER :: unwrapped = .true. ! unwrapped coordinates
   
 ! Box/Particle details
 
