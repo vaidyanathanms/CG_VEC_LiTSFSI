@@ -4,14 +4,14 @@
 ! Monomers can contain 1 or 2 blobs
 MODULE PARAMS
 
-!  USE RAN_NUMBERS
+  USE RAN_NUMBERS
 
   IMPLICIT NONE
 
 ! Parameter data for creating the data file
 
   INTEGER, PARAMETER :: N_poly      = 100  ! No of polymer chains
-  INTEGER, PARAMETER :: M_poly      = 30  ! MW of polymer chain
+  INTEGER, PARAMETER :: M_poly      = 20  ! MW of polymer chain
   INTEGER, PARAMETER :: CG_per_mon  = 2   ! No. of CG blobs per VEC monomer
   REAL,    PARAMETER :: an_poly_rat = 0.2 ! Ratio b/w VEC and STSFI monomers
   REAL,    PARAMETER :: charge_poly = 0.25 ! Charge on polymer blob
@@ -24,7 +24,7 @@ MODULE PARAMS
   INTEGER, PARAMETER :: blob_per_ch = CG_per_mon*M_poly+ideal_an_per_ch
   INTEGER, PARAMETER :: totblobs = N_cations + N_poly*blob_per_ch
   LOGICAL, PARAMETER :: unwrapped = .true. ! unwrapped coordinates
-  
+  LOGICAL, PARAMETER :: ifort = .true. ! intel compiler
 ! Box/Particle details
 
   REAL :: boxl_x, boxl_y, boxl_z
@@ -60,7 +60,7 @@ MODULE PARAMS
   CHARACTER (LEN = 12) :: f_char
   CHARACTER (LEN = 60 ):: datafile
 
-!!$  TYPE (RAN_SAVE) :: X
+  TYPE (RAN_SAVE) :: X
   INTEGER(4) :: S
   
 END MODULE PARAMS

@@ -1,4 +1,4 @@
-! To generate LAMMPS input file for polyelectrolyte simulations
+! To generate LAMMPS input file for SIC (VEC-LiSTFSI) systems
 ! Use in conjunction with lmp_params.f90 and ran_numbers.f90
 PROGRAM LAMMPSINP
 
@@ -13,10 +13,6 @@ PROGRAM LAMMPSINP
   bondlsq = 0
 
   CALL SYSTEM_CLOCK(S)
-
-!!$  narg = IARGC()
-  
-!!$  IF(narg == 1) THEN
 
   OPEN (unit = outfile, file = "lmp_input.dat", status ="replace",&
        & action="write",iostat=ierror)
@@ -154,13 +150,18 @@ SUBROUTINE LMP_COORD()
   END DO
 
   ! Writing Masses
+  
+  WRITE(10,'(I0,1X,F14.8)') 1, 12.4 ! VEC without C=O
+  WRITE(10,'(I0,1X,F14.8)') 2, 4.0  ! C=O of VEC
+  WRITE(10,'(I0,1X,F14.8)') 3, 48.7 ! MTFSI
+  WRITE(10,'(I0,1X,F14.8)') 4, 1.0  ! Li
 
-  DO i = 1,numatomtypes
-
-     massval = 1.000
-     WRITE(10,'(I0,1X,F14.8)') i, massval
-
-  END DO
+!!$  DO i = 1,numatomtypes
+!!$
+!!$     massval = 1.000
+!!$     WRITE(10,'(I0,1X,F14.8)') i, massval
+!!$
+!!$  END DO
   
   ! Writing atomic corrdinates
   
@@ -383,12 +384,10 @@ SUBROUTINE INPCOR()
   REAL :: theta, phi
   REAL :: rx, ry, rz,rval
   LOGICAL :: in_box
-  REAL :: X(3)
   REAL :: csum
   LOGICAL :: arr_bound
   
-!!$  CALL RAN_INIT(S,X)
-  CALL RANDOM_INIT(.TRUE., .TRUE.)
+  CALL RAN_INIT(S,X)
   
   WRITE(outfile,*) "Random Initial Configuration : NRRW"
 
@@ -408,36 +407,33 @@ SUBROUTINE INPCOR()
      
      ! First blob is VEC
      k = (i-1)*blob_per_ch + 1     
-!!$     theta     = math_pi*RAN1(X)
-!!$     phi       = 2*math_pi*RAN1(X)
-     theta     = math_pi*RAND()
-     phi       = 2*math_pi*RAND()
-     rxyz(k,1) = r0init*sin(theta)*cos(phi)
-     rxyz(k,2) = r0init*sin(theta)*sin(phi)
-     rxyz(k,3) = r0init*cos(theta)
+     theta     = math_pi*RAN1(X)
+     phi       = 2*math_pi*RAN1(X)
+     rxyz(k,1) = RAN1(X)*boxl_x
+     rxyz(k,2) = RAN1(X)*boxl_y
+     rxyz(k,3) = RAN1(X)*boxl_z
 
      ! Create atom types here
      aidvals(k,1) = k ! Atom ID
      aidvals(k,2) = i ! Mol ID
      aidvals(k,3) = 1 ! Atom type
-     charge(k)    = (REAL(cgcnt)-0.5*(1+CG_per_mon))*2*charge_poly
+     charge(k)    = (0.5*(1+CG_per_mon)-REAL(cgcnt))*2*charge_poly
      
      DO cgcnt = 2, CG_per_mon
 
         k = (i-1)*blob_per_ch + cgcnt
         bondtemp     = bondtemp + 1
         CALL CHECK_ARRAY_BOUNDS(i,k,bondtemp,arr_bound)
-!!$        theta     = math_pi*RAN1(X)
-!!$        phi       = 2*math_pi*RAN1(X)
-        theta     = math_pi*RAND()
-        phi       = 2*math_pi*RAND()
+        
+        theta     = math_pi*RAN1(X)
+        phi       = 2*math_pi*RAN1(X)
         rxyz(k,1) = rxyz(k-1,1) + r0init*sin(theta)*cos(phi)
         rxyz(k,2) = rxyz(k-1,2) + r0init*sin(theta)*sin(phi)
         rxyz(k,3) = rxyz(k-1,3) + r0init*cos(theta)
         aidvals(k,1) = k
         aidvals(k,2) = i
         aidvals(k,3) = cgcnt
-        charge(k)    = (REAL(cgcnt)-0.5*(1+CG_per_mon))*2*charge_poly
+        charge(k)    = (0.5*(1+CG_per_mon)-REAL(cgcnt))*2*charge_poly 
         CALL ASSIGN_BOND_TOPO(bondtemp,aidvals(k-1,1),aidvals(k,1)&
              &,160)
         
@@ -448,19 +444,19 @@ SUBROUTINE INPCOR()
         !and not BLOBS
 
         ! Second monomer onwards can be STSFI (anion)
-        IF (j .NE. M_poly+ideal_an_per_ch .AND. RAND() .LE.&
+        IF (j .NE. M_poly+ideal_an_per_ch .AND. RAN1(X) .LE.&
              & an_poly_rat) THEN ! can be attached to
            ! blob-1 only
-!!$                 theta     = math_pi*RAN1(X)
-!!$                 phi       = 2*math_pi*RAN1(X)
+           
+           theta     = math_pi*RAN1(X)
+           phi       = 2*math_pi*RAN1(X)
+           
            bondtemp       = bondtemp + 1
            ! Check if more blobs/bonds are created than the array
            ! bounds
            CALL CHECK_ARRAY_BOUNDS(i,k+1,bondtemp,arr_bound)
 
            IF (arr_bound .EQV. .TRUE.) THEN
-              theta     = math_pi*RAND()
-              phi       = 2*math_pi*RAND()          
               aidvals(k+1,1) = k + 1
               aidvals(k+1,2) = i
               aidvals(k+1,3) = CG_per_mon + 1
@@ -512,15 +508,15 @@ SUBROUTINE INPCOR()
               CALL CHECK_ARRAY_BOUNDS(i,k,bondtemp,arr_bound)
 
               IF (arr_bound .EQV. .TRUE.) THEN
-!!$           theta     = math_pi*RAN1(X)
-!!$           phi       = 2*math_pi*RAN1(X)
-                 theta     = math_pi*RAND()
-                 phi       = 2*math_pi*RAND()
+
+           
+                 theta     = math_pi*RAN1(X)
+                 phi       = 2*math_pi*RAN1(X)
                  aidvals(k,1) = k
                  aidvals(k,2) = i
                  aidvals(k,3) = cgcnt
-                 charge(k)    = (REAL(cgcnt)-0.5*(1+CG_per_mon))*2&
-                      &*charge_poly
+                 charge(k)    = (0.5*(1+CG_per_mon)-REAL(cgcnt))*2*charge_poly
+                 
                  
                  IF (cgcnt == 1) THEN
                     IF(aidvals(k-1,3) == CG_per_mon + 1) THEN !poly_mon-anion
@@ -586,12 +582,9 @@ SUBROUTINE INPCOR()
 
   DO i = k+1, k + N_cations
   
-!!$     rxyz(i,1) = RAN1(X)*boxl_x
-!!$     rxyz(i,2) = RAN1(X)*boxl_y
-!!$     rxyz(i,3) = RAN1(X)*boxl_z
-     rxyz(i,1) = RAND()*boxl_x
-     rxyz(i,2) = RAND()*boxl_y
-     rxyz(i,3) = RAND()*boxl_z
+     rxyz(i,1) = RAN1(X)*boxl_x
+     rxyz(i,2) = RAN1(X)*boxl_y
+     rxyz(i,3) = RAN1(X)*boxl_z
      aidvals(i,1) = i
      aidvals(i,2) = N_poly+1
      aidvals(i,3) = CG_per_mon + 2
@@ -639,9 +632,7 @@ SUBROUTINE INPCOR()
      PRINT *, "Good Charge Neutrality ", csum
 
   END IF
-
-
-  
+ 
 END SUBROUTINE INPCOR
 
 !--------------------------------------------------------------------
@@ -707,14 +698,14 @@ SUBROUTINE CREATEFILE() !CREATEFILE(narg)
   USE PARAMS
   IMPLICIT NONE
 
-!!$  INTEGER,INTENT(IN)  :: narg
-!!$  CHARACTER (LEN = 7) :: ch_arch
   CHARACTER (LEN = 6) :: nmon_char
   CHARACTER (LEN = 7) :: prefix = "VECdata"
+  CHARACTER (LEN = 4) :: frat_char
  
   WRITE(nmon_char,"(I0)") M_poly
+  WRITE(frat_char,"(F4.2)") an_poly_rat
 
-  datafile = prefix//trim(adjustl(nmon_char))//'.dat'
+  datafile = prefix//'_'//trim(adjustl(nmon_char))//'_'//trim(adjustl(frat_char))//'.dat'
      
   WRITE(outfile,*) "Data file generated for simulation is ",&
        & trim(datafile)
