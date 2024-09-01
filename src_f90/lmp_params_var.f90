@@ -10,19 +10,19 @@ MODULE PARAMS
 
 ! Parameter data for creating the data file - inputs from python script
 
-  INTEGER, PARAMETER :: M_poly      = 60     ! MW of polymerized
+  INTEGER, PARAMETER :: M_poly      = py_mwchain     ! MW of polymerized
   ! chain (VEC + anion)
-  INTEGER, PARAMETER :: N_poly      = 100     ! # of
+  INTEGER, PARAMETER :: N_poly      = py_nchains     ! # of
   ! polymerized chains
-  REAL,    PARAMETER :: an_poly_rat = 0.1  ! Ratio b/w anion
+  REAL,    PARAMETER :: an_poly_rat = py_fracanions  ! Ratio b/w anion
   ! and VEC monomers: domain = [0,1) in polymerized chains 
-  REAL,    PARAMETER :: frac_unpoly = 0.6  ! Unpolymerized
+  REAL,    PARAMETER :: frac_unpoly = py_unpoly_frac ! Unpolymerized
   ! VEC monomer fraction: domain = [0,1)
 
-  REAL,    PARAMETER :: charge_poly = 0.2   ! Charge on polymer
+  REAL,    PARAMETER :: charge_poly = py_chargblob   ! Charge on polymer
   ! blob
-  INTEGER, PARAMETER :: CG_per_mon  = 2 ! No. of CG blobs per VEC 
-  REAL,    PARAMETER :: density     = 0.8  ! System density
+  INTEGER, PARAMETER :: CG_per_mon  = py_cgpermon ! No. of CG blobs per VEC 
+  REAL,    PARAMETER :: density     = py_density  ! System density
 
 
 ! Calculations based on input parameters for system initialization
@@ -37,7 +37,7 @@ MODULE PARAMS
 
   ! VECs (or uncharged moieties)
   INTEGER, PARAMETER :: VEC_per_ch   = INT(REAL(M_poly*REAL(1 -&
-       & an_poly_rat))) ! Number of VEC per chain 
+       & an_poly_rat)) ! Number of VEC per chain 
   INTEGER, PARAMETER :: T_poly_VEC   = VEC_per_ch*N_poly ! Tot. # of
   ! polymerized VECs in the system
   INTEGER, PARAMETER :: T_VEC_mons   = INT(REAL(T_poly_VEC)/REAL(1&
@@ -70,17 +70,15 @@ MODULE PARAMS
   INTEGER, PARAMETER :: atomic = 0
   INTEGER, PARAMETER :: triblock = 0
   INTEGER, PARAMETER :: stretched = 0
-  INTEGER, PARAMETER :: numatomtypes = CG_per_mon*(1&
-       &+CEILING(frac_unpoly)) + 2 
-  INTEGER, PARAMETER :: numbondtypes = CG_per_mon + 3
+  INTEGER, PARAMETER :: numatomtypes = CG_per_mon + 2
+  INTEGER, PARAMETER :: numbondtypes = CG_per_mon + 2
   INTEGER, PARAMETER :: numangltypes = 0! 2*CG_per_mon
   INTEGER, PARAMETER :: numdihdtypes = 0
   INTEGER, PARAMETER :: bondtype = 1
   INTEGER, PARAMETER :: angltype = 1
   INTEGER, PARAMETER :: dihdtype = 0
   INTEGER, PARAMETER :: outfile  = 17
-  INTEGER, PARAMETER :: nbonds = N_poly*(blob_per_ch-1) + (CG_per_mon&
-       &-1)*T_unpoly_VEC
+  INTEGER, PARAMETER :: nbonds = N_poly*(blob_per_ch-1)
   INTEGER, PARAMETER :: nangls = 0
   INTEGER, PARAMETER :: ndihds = 0
 

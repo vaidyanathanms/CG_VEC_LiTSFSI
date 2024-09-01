@@ -19,10 +19,11 @@ PROGRAM LAMMPSINP
   
   IF(ierror /= 0) STOP "Cannot open lmp_input.txt"
   
-  CALL CREATEFILE() !CREATEFILE(narg)
+  CALL CREATEFILE() 
   CALL COMPUTE_BOX()
   CALL ALLOCATE_ARRAYS()
   CALL INPCOR()
+  CALL SET_IMGFLAGS()
   CALL LMP_COORD()
   CALL DEALLOCATE_ARRAYS()
   WRITE(outfile,*) "Successfully Written Datafile .."
@@ -42,7 +43,7 @@ SUBROUTINE LMP_COORD()
   
   INTEGER :: i,j, k, ierror
   INTEGER ::  bondid, anglid, dihdid
-  REAL ::  massval, rx, ry, rz
+  REAL ::  massval
   i = 1
   
   PRINT *, "Writing LAMMPS Datafile .. "
@@ -95,60 +96,6 @@ SUBROUTINE LMP_COORD()
   WRITE (10,*) "Masses"
   WRITE (10,*)
   
-!!$Fetching image information
-
-  ixyz = 0 ! If I don't assign, errors may creep
-  
-  DO i = 1,N_poly
-     
-     k = (i-1)*blob_per_ch + 1
-
-     ixyz(k,1) = 0
-     ixyz(k,2) = 0
-     ixyz(k,3) = 0
-     
-     DO j = 1,blob_per_ch-1
-        
-        k = (i-1)*blob_per_ch + j
-        
-        IF (aidvals(k+1,3) == 2) THEN
-
-           rx = rxyz(k,1) - rxyz(k+1,1)
-           ry = rxyz(k,2) - rxyz(k+1,2)
-           rz = rxyz(k,3) - rxyz(k+1,3)
-           CALL IMGFLAGS(rx,ixyz(k,1),boxl_x,ixyz(k+1,1))
-           CALL IMGFLAGS(ry,ixyz(k,2),boxl_y,ixyz(k+1,2))
-           CALL IMGFLAGS(rz,ixyz(k,3),boxl_z,ixyz(k+1,3))
-
-        ELSE
-
-           IF (aidvals(k,3) == 1 .OR. aidvals(k,3) == CG_per_mon+1) THEN
-
-              rx = rxyz(k,1) - rxyz(k+1,1)
-              ry = rxyz(k,2) - rxyz(k+1,2)
-              rz = rxyz(k,3) - rxyz(k+1,3)
-              CALL IMGFLAGS(rx,ixyz(k,1),boxl_x,ixyz(k+1,1))
-              CALL IMGFLAGS(ry,ixyz(k,2),boxl_y,ixyz(k+1,2))
-              CALL IMGFLAGS(rz,ixyz(k,3),boxl_z,ixyz(k+1,3))
-
-             
-           ELSEIF (aidvals(k,2) == 2) THEN
-
-              rx = rxyz(k-CG_per_mon+1,1) - rxyz(k+1,1)
-              ry = rxyz(k-CG_per_mon+1,2) - rxyz(k+1,2)
-              rz = rxyz(k-CG_per_mon+1,3) - rxyz(k+1,3)
-              CALL IMGFLAGS(rx,ixyz(k-CG_per_mon+1,1),boxl_x,ixyz(k+1,1))
-              CALL IMGFLAGS(ry,ixyz(k-CG_per_mon+1,2),boxl_y,ixyz(k+1,2))
-              CALL IMGFLAGS(rz,ixyz(k-CG_per_mon+1,3),boxl_z,ixyz(k+1,3))
-                           
-           END IF
-
-        END IF
-             
-     END DO
-     
-  END DO
-
   ! Writing Masses
   
   WRITE(10,'(I0,1X,F14.8)') 1, 12.4 ! VEC without C=O
@@ -156,13 +103,18 @@ SUBROUTINE LMP_COORD()
   WRITE(10,'(I0,1X,F14.8)') 3, 48.7 ! MTFSI
   WRITE(10,'(I0,1X,F14.8)') 4, 1.0  ! Li
 
+  IF(frac_unpoly .NE. 0.0) THEN
+     WRITE(10,'(I0,1X,F14.8)') 5, 12.4 ! unpolymerized VEC w/o C=O 
+     WRITE(10,'(I0,1X,F14.8)') 6, 4.0  ! C=O of unpolymerized VEC
+  END IF
+
 !!$  DO i = 1,numatomtypes
 !!$
 !!$     massval = 1.000
 !!$     WRITE(10,'(I0,1X,F14.8)') i, massval
 !!$
 !!$  END DO
-  
+
   ! Writing atomic corrdinates
   
   WRITE (10,*) 
@@ -181,17 +133,9 @@ SUBROUTINE LMP_COORD()
              & aidvals(i,3), charge(i), rxyz(i,1) + boxl_x*ixyz(i,1),&
              & rxyz(i,2) + boxl_y*ixyz(i,2),rxyz(i,3)+ boxl_z*ixyz(i&
              &,3)
-
-        IF(ixyz(i,1) .NE. 0 .OR. ixyz(i,2) .NE. 0 .OR. ixyz(i,3) .NE.&
-             & 0) THEN
-           PRINT *, "Long bonds found", i, ixyz(i,1), ixyz(i,2),&
-                & ixyz(i,3)
-           STOP
-        END IF
         
      END IF
-
-     
+    
   END DO
 
   IF(numbondtypes /= 0) THEN
@@ -212,87 +156,105 @@ SUBROUTINE LMP_COORD()
         
   END IF
 
-!!$  IF(numangltypes /= 0) THEN
-!!$
-!!$     ! Writing Angle Details
-!!$
-!!$     anglid = 0
-!!$     WRITE (10,*)
-!!$     WRITE (10,*) "Angles"
-!!$     WRITE (10,*)
-!!$     
-!!$     DO i = 1,N_brush
-!!$        
-!!$        DO j = 1,M_brush-2
-!!$           
-!!$           anglid = anglid + 1
-!!$           k = (i-1)*M_brush + j           
-!!$           WRITE(10,'(5(I0,2X))') anglid, angltype, aidvals(k,1)&
-!!$                &,aidvals(k+1,1),aidvals(k+2,1)
-!!$           
-!!$        END DO
-!!$        
-!!$     END DO
-!!$
-!!$     DO i = 1,N
-!!$        
-!!$        DO j = 1,M-2
-!!$           
-!!$           anglid = anglid + 1
-!!$           k = (i-1)*M + j + N_brush*M_brush
-!!$           WRITE(10,'(5(I0,2X))') anglid, angltype, aidvals(k,1)&
-!!$                &,aidvals(k+1,1),aidvals(k+2,1)
-!!$           
-!!$        END DO
-!!$        
-!!$     END DO
-!!$
-!!$  END IF
-!!$
-!!$  IF(numdihdtypes /= 0) THEN
-!!$
-!!$     ! Writing Dihedral Details
-!!$     
-!!$     dihdid = 0
-!!$     WRITE (10,*)
-!!$     WRITE (10,*) "Dihedrals"
-!!$     WRITE (10,*)
-!!$     
-!!$     DO i = 1,N_brush
-!!$        
-!!$        DO j = 1,M_brush-3
-!!$           
-!!$           dihdid = dihdid + 1
-!!$           k = (i-1)*M_brush + j 
-!!$
-!!$           WRITE(10,'(6(I0,2X))') dihdid, dihdtype, aidvals(k,1)&
-!!$                &,aidvals(k+1,1), aidvals(k+2,1), aidvals(k+3,1)
-!!$           
-!!$        END DO
-!!$        
-!!$     END DO
-!!$
-!!$     DO i = 1,N
-!!$        
-!!$        DO j = 1,M-3
-!!$           
-!!$           dihdid = dihdid + 1
-!!$           k = (i-1)*M + j + N_brush*M_brush
-!!$
-!!$           WRITE(10,'(6(I0,2X))') dihdid, dihdtype, aidvals(k,1)&
-!!$                &,aidvals(k+1,1), aidvals(k+2,1), aidvals(k+3,1)
-!!$           
-!!$        END DO
-!!$        
-!!$     END DO
-!!$
-!!$  END IF
-
   CLOSE(unit = 10)
 
 END SUBROUTINE LMP_COORD
 
-!--------------------------------------------------------------------  
+!----------------------------------------------------------------------
+
+SUBROUTINE SET_IMGFLAGS()
+
+  USE PARAMS
+
+  INTEGER :: i,j,k
+  REAL :: rx, ry, rz
+
+  ixyz = 0 ! If I don't assign, errors may creep
+
+  ! Polymerized molecules
+  DO i = 1,N_poly
+     
+     ! First blob
+     k = (i-1)*blob_per_ch + 1
+
+     ixyz(k,1) = 0
+     ixyz(k,2) = 0
+     ixyz(k,3) = 0
+     
+     DO j = 1,blob_per_ch-1
+        
+        k = (i-1)*blob_per_ch + j
+        
+        ! Branched VEC blobs
+        IF (aidvals(k+1,3) > 1 .OR. aidvals(k+1,3) .LE. CG_per_mon)&
+             & THEN
+
+           rx = rxyz(k,1) - rxyz(k+1,1)
+           ry = rxyz(k,2) - rxyz(k+1,2)
+           rz = rxyz(k,3) - rxyz(k+1,3)
+           CALL IMGFLAGS(rx,ixyz(k,1),boxl_x,ixyz(k+1,1))
+           CALL IMGFLAGS(ry,ixyz(k,2),boxl_y,ixyz(k+1,2))
+           CALL IMGFLAGS(rz,ixyz(k,3),boxl_z,ixyz(k+1,3))
+
+        ELSE
+           ! VEC blob in main chain or the anion blob
+           IF (aidvals(k,3) == 1 .OR. aidvals(k,3) == CG_per_mon+1)&
+                & THEN
+
+              rx = rxyz(k,1) - rxyz(k+1,1)
+              ry = rxyz(k,2) - rxyz(k+1,2)
+              rz = rxyz(k,3) - rxyz(k+1,3)
+              CALL IMGFLAGS(rx,ixyz(k,1),boxl_x,ixyz(k+1,1))
+              CALL IMGFLAGS(ry,ixyz(k,2),boxl_y,ixyz(k+1,2))
+              CALL IMGFLAGS(rz,ixyz(k,3),boxl_z,ixyz(k+1,3))
+
+            
+           ELSEIF (aidvals(k,3) == CG_per_mon) THEN
+              ! Image flags for blobs in main chain right after the
+              ! branch ends
+              rx = rxyz(k-CG_per_mon+1,1) - rxyz(k+1,1)
+              ry = rxyz(k-CG_per_mon+1,2) - rxyz(k+1,2)
+              rz = rxyz(k-CG_per_mon+1,3) - rxyz(k+1,3)
+              CALL IMGFLAGS(rx,ixyz(k-CG_per_mon+1,1),boxl_x,ixyz(k+1,1))
+              CALL IMGFLAGS(ry,ixyz(k-CG_per_mon+1,2),boxl_y,ixyz(k+1,2))
+              CALL IMGFLAGS(rz,ixyz(k-CG_per_mon+1,3),boxl_z,ixyz(k+1,3))
+                           
+           END IF
+
+        END IF
+             
+     END DO
+     
+  END DO
+
+  ! Unpolymerized VEC molecules
+  DO i = 1, T_unpoly_VEC
+     
+     ! First blob of the VEC unpolymerized molecule
+     k = N_poly*blob_per_ch + (i-1)*CG_per_mon + 1
+
+     ixyz(k,1) = 0
+     ixyz(k,2) = 0
+     ixyz(k,3) = 0
+
+     DO j = 1, CG_per_mon-1
+
+        k = N_poly*blob_per_ch + (i-1)*CG_per_mon + j
+        
+        rx = rxyz(k,1) - rxyz(k+1,1)
+        ry = rxyz(k,2) - rxyz(k+1,2)
+        rz = rxyz(k,3) - rxyz(k+1,3)
+        CALL IMGFLAGS(rx,ixyz(k,1),boxl_x,ixyz(k+1,1))
+        CALL IMGFLAGS(ry,ixyz(k,2),boxl_y,ixyz(k+1,2))
+        CALL IMGFLAGS(rz,ixyz(k,3),boxl_z,ixyz(k+1,3))
+
+     END DO
+
+  END DO
+
+END SUBROUTINE SET_IMGFLAGS
+
+!----------------------------------------------------------------------
 
 SUBROUTINE IMGFLAGS(dist, img, boxl, imgout)
     
@@ -332,28 +294,29 @@ SUBROUTINE COMPUTE_BOX()
  
   WRITE(outfile,*) "Simulation inputs ...."
 
-  volbox = REAL(totpart)/REAL(density)
+  volbox = REAL(totblobs)/REAL(density)
   boxl_x = volbox**(1.0/3.0)
   boxl_y = volbox**(1.0/3.0)
   boxl_z = volbox**(1.0/3.0)
 
-  ! Extra 2.0 factor above so that diagonal is approximately equal to
-  !  sqrt(area/num_chains)
-
   WRITE(outfile,*) "----------System level details-------------------"
-  WRITE(outfile,*) "Total particles: ", totpart
-  WRITE(outfile,*) "Total blobs: ", totblobs
+  WRITE(outfile,*) "Total # of particles/blobs: ", totblobs
+  WRITE(outfile,*) "# of CG blobs per polymer (VEC) monomer: ",&
+       & CG_per_mon
   WRITE(outfile,*) "Total # of polymer chains: ", N_poly
+  WRITE(outfile,*) "Total # of chains+unpolymerized mons: ", nmols
   WRITE(outfile,*) "Total # of anion blobs: ", N_anions
   WRITE(outfile,*) "Total # of cations: ", N_cations
+  WRITE(outfile,*) "Fraction of unpolymerized-mers: ", frac_unpoly
+  WRITE(outfile,*) "Total # of monomers: ", T_VEC_mons
+  WRITE(outfile,*) "Total # of polymerized VEC mons: ", T_poly_VEC
+  WRITE(outfile,*) "Total # of unpolymerized-mers: ", T_unpoly_VEC
   
   WRITE(outfile,*) "----------Chain level details--------------------"
-  WRITE(outfile,*) "# of CG blob per polymer monomer: ", CG_per_mon
   WRITE(outfile,*) "Ratio between anions and VEC mons per chain: ",&
        & an_poly_rat
-  WRITE(outfile,*) "# of blobs per chain: ", ideal_an_per_ch +&
-       & CG_per_mon*M_poly
-  WRITE(outfile,*) "# of anion blobs per chain: ", N_anions
+  WRITE(outfile,*) "# of blobs per chain: ", blob_per_ch
+  WRITE(outfile,*) "# of anion blobs per chain: ", ideal_an_per_ch
 
   WRITE(outfile,*) "----------Box details----------------------------"
   WRITE(outfile,*) "LX/LY/LZ: ", boxl_x, boxl_y, boxl_z
@@ -375,7 +338,7 @@ SUBROUTINE INPCOR()
 
   IMPLICIT NONE
   
-  INTEGER :: i,j,k,u,v,ierror
+  INTEGER :: i,j,k,u,v,ierror,un_chid
   INTEGER :: an_per_ch,bondid_new, bondtemp, cgcnt, poly_mon
   REAL, PARAMETER :: r0init  = 0.97
   REAL, PARAMETER :: r0sq3   = r0init/sqrt(3.0)
@@ -396,7 +359,8 @@ SUBROUTINE INPCOR()
   WRITE(outfile,*) "Generating chain configurations .. "
 
   i = 1; bondid_new = 0
-  
+
+  ! Polymerized chains
   DO WHILE (i .LE. N_poly)
 
      bondtemp = bondid_new
@@ -440,23 +404,22 @@ SUBROUTINE INPCOR()
      END DO
 
      j = 2
-     DO WHILE (j .LE. M_poly+ideal_an_per_ch) !j runs over MONOMERS
-        !and not BLOBS
+     DO WHILE (j .LE. M_poly) !j runs over MONOMERS and not BLOBS
 
         ! Second monomer onwards can be STSFI (anion)
-        IF (j .NE. M_poly+ideal_an_per_ch .AND. RAN1(X) .LE.&
-             & an_poly_rat) THEN ! can be attached to
-           ! blob-1 only
+        IF (j .NE. M_poly .AND. RAN1(X) .LE.  an_poly_rat) THEN ! can
+           ! be attached to blob-1 only
            
            theta     = math_pi*RAN1(X)
            phi       = 2*math_pi*RAN1(X)
-           
-           bondtemp       = bondtemp + 1
+
+           bondtemp  = bondtemp + 1
            ! Check if more blobs/bonds are created than the array
            ! bounds
            CALL CHECK_ARRAY_BOUNDS(i,k+1,bondtemp,arr_bound)
 
            IF (arr_bound .EQV. .TRUE.) THEN
+              ! Generate anions bonded to the backbone
               aidvals(k+1,1) = k + 1
               aidvals(k+1,2) = i
               aidvals(k+1,3) = CG_per_mon + 1
@@ -501,14 +464,14 @@ SUBROUTINE INPCOR()
            cgcnt = 1
            DO WHILE (cgcnt .LE. CG_per_mon)
              
-              k = (i-1)*blob_per_ch + CG_per_mon*poly_mon + cgcnt + an_per_ch
+              k = (i-1)*blob_per_ch + CG_per_mon*poly_mon + cgcnt +&
+                   & an_per_ch
               bondtemp     = bondtemp + 1
               ! Check if more blobs/bonds are created than the array
               ! bounds
               CALL CHECK_ARRAY_BOUNDS(i,k,bondtemp,arr_bound)
 
               IF (arr_bound .EQV. .TRUE.) THEN
-
            
                  theta     = math_pi*RAN1(X)
                  phi       = 2*math_pi*RAN1(X)
@@ -550,7 +513,7 @@ SUBROUTINE INPCOR()
 
               ELSE
 
-                 j = M_poly+ideal_an_per_ch
+                 j = M_poly
                  cgcnt = CG_per_mon+1
 
               END IF
@@ -575,9 +538,51 @@ SUBROUTINE INPCOR()
      
   END DO
 
+  PRINT *, "---------Polymerized chain data-------------------"
   PRINT *, "Ideal number of polymer blobs: ", N_poly*blob_per_ch
   PRINT *, "Total number of polymer blobs: ", k
   PRINT *, "NCations, NAnions ", N_cations, N_anions
+  PRINT *, "------Generated polymerized chains----------------"
+
+! Create unpolymerized polymer (VEC) monomers
+  DO un_chid = i+1, i+T_unpoly_VEC 
+
+     ! Head VEC blob
+     k = k + 1; cgcnt = 1
+     theta     = math_pi*RAN1(X)
+     phi       = 2*math_pi*RAN1(X)
+     rxyz(k,1) = RAN1(X)*boxl_x
+     rxyz(k,2) = RAN1(X)*boxl_y
+     rxyz(k,3) = RAN1(X)*boxl_z
+
+     ! Create atom types here
+     aidvals(k,1) = k ! Atom ID
+     aidvals(k,2) = i ! Mol ID
+     aidvals(k,3) = CG_per_mon + 2 ! Atom type
+     charge(k)    = (0.5*(1+CG_per_mon)-REAL(cgcnt))*2*charge_poly   
+
+     DO cgcnt = 2, CG_per_mon
+
+        k = k + 1
+        bondtemp  = bondtemp + 1
+       
+        theta     = math_pi*RAN1(X)
+        phi       = 2*math_pi*RAN1(X)
+        rxyz(k,1) = rxyz(k-1,1) + r0init*sin(theta)*cos(phi)
+        rxyz(k,2) = rxyz(k-1,2) + r0init*sin(theta)*sin(phi)
+        rxyz(k,3) = rxyz(k-1,3) + r0init*cos(theta)
+        aidvals(k,1) = k
+        aidvals(k,2) = un_chid
+        aidvals(k,3) = CG_per_mon + cgcnt + 1 !cgcnt is from 2
+        charge(k)    = (0.5*(1+CG_per_mon)-REAL(cgcnt))*2*charge_poly 
+        CALL ASSIGN_BOND_TOPO(bondtemp,aidvals(k-1,1),aidvals(k,1)&
+             &,260)
+        
+     END DO
+
+  END DO
+  PRINT *, "------Generated unpolymerized chains--------------"
+
 ! Create lithium cations
 
   DO i = k+1, k + N_cations
@@ -586,12 +591,13 @@ SUBROUTINE INPCOR()
      rxyz(i,2) = RAN1(X)*boxl_y
      rxyz(i,3) = RAN1(X)*boxl_z
      aidvals(i,1) = i
-     aidvals(i,2) = N_poly+1
-     aidvals(i,3) = CG_per_mon + 2
+     aidvals(i,2) = N_poly + T_unpoly_VEC + 1
+     aidvals(i,3) = CG_per_mon*(1 + CEILING(frac_unpoly)) + 2
      charge(i)    = 1.0
         
   END DO
-     
+  PRINT *, "------Generated lithium cations--------------------"     
+
   IF (unwrapped .EQV. .false.) THEN
      ! PBC
      
@@ -624,7 +630,7 @@ SUBROUTINE INPCOR()
      WRITE(outfile,*) "System not charge neutral", csum
      PRINT *, "ERROR: System not charge neutral", csum
      CLOSE(93)
-     STOP
+!     STOP
      
   ELSE
 
@@ -665,26 +671,40 @@ SUBROUTINE ASSIGN_BOND_TOPO(bid,aid1,aid2,iderr)
   atype1 = aidvals(aid1,3)
   atype2 = aidvals(aid2,3)
   
-  IF (atype1 == atype2) THEN
+  IF (aidvals(aid1,2) .LE. N_poly) THEN !Polymerized molecules
 
-     IF (atype1 == 1) THEN
-        btype = 1
-     ELSEIF (atype1 == 3) THEN
-        btype = 2
+     IF (atype1 == atype2) THEN
+
+        IF (atype1 == 1) THEN
+           btype = 1 ! VEC_head-VEC_head
+        ELSEIF (atype1 == CG_per_mon + 1) THEN
+           btype = CG_per_mon + 2 ! Anion-Anion
+        ELSE
+           PRINT *, "Bond error ", bid, aid1, aid2,atype1,atype2,iderr
+        END IF
+
+     ELSEIF ((atype1 == 1 .OR. atype1 == CG_per_mon+1) .AND. (atype2 ==&
+          & 1 .OR. atype2 == CG_per_mon+1) ) THEN
+
+        btype = CG_per_mon + 1 ! VEC-Anion
+
+     ELSEIF((atype1 .NE. CG_per_mon+1) .AND. (atype2 .NE. CG_per_mon+1))&
+          & THEN
+
+        btype = MAX(atype1, atype2) ! Branched mon - branched mon
+
      ELSE
-        PRINT *, "Error type 1", bid, aid1, aid2,atype1,atype2,iderr
-     END IF
-        
-  ELSEIF (atype1 .NE. 2 .AND. atype2 .NE. 2) THEN
-     btype = 3
 
-  ELSEIF((atype1 == 1 .AND. atype2 == 2) .OR. (atype1==2 .AND. atype2&
-       & == 1)) THEN
-     btype = 4
-  ELSE
-     PRINT *, "Error type 2", bid, aid1, aid2,atype1,atype2,iderr
+        PRINT *, "Bond error ", bid, aid1, aid2,atype1,atype2,iderr
+
+     END IF
+
+  ELSE !Unpolymerized VEC molecules
+
+     btype = CG_per_mon + 3
+
   END IF
-  
+    
   topo_bond(bid,1) = bid
   topo_bond(bid,2) = btype
   topo_bond(bid,3) = aid1
