@@ -1,13 +1,16 @@
+!----------------Parameter file for SIC generation--------------------
 ! Input file to generate LAMMPS file for SIC systems
 ! Use in conjunction with lammps_inp.f90 and ran_numbers.f90
 ! Change the required parameters
 ! Monomers can contain 1 or 2 blobs
+!---------------------------------------------------------------------
 MODULE PARAMS
 
   USE RAN_NUMBERS
 
   IMPLICIT NONE
 
+! REQUIRED INPUTS
 ! Parameter data for creating the data file - inputs from python script
 
   INTEGER, PARAMETER :: M_poly      = py_mwchain     ! MW of polymerized
