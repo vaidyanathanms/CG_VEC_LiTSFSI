@@ -29,16 +29,16 @@ from my_python_functions import clean_backup_initfiles
 restart   = 1  # For restarting from given configurations
 num_hrs   = 23 # Total number of hours for run
 num_nodes = 1  # Number of nodes
-num_cores = 32 # Number of cores per node
+num_cores = 96 # Number of cores per node
 
 #---------input details - Topology--------------------------------
-frac_anions  = [0.1,0.2,0.3,0.4,0.5]#,0.3,0.4,0.5] # fraction of anions
-tot_mons     = 3000 # total number of MONOMERS
-chain_mw     = [24] #[20,30]#,32]#,50,80] # # of monomer range per chain
+frac_anions  = [1/30,1/20,1/10,1/6,1/5,1/3] # fraction of anions
+tot_mons     = 6000 # total number of MONOMERS
+chain_mw     = [30,60,90] # of monomer range per chain
 num_chains   = [tot_mons/x for x in chain_mw]
-density      = 0.7 # system density
+density      = 0.8 # system density
 cg_per_mon   = 2 # number of blobs per polymer monomer
-blob_charge  = 0.25 # charge per blob
+blob_charge  = 0.2 # charge per blob
 nrepeats     = 1 # number of replica
 
 #---------input details - Pair Coeff--------------------------------
@@ -56,10 +56,10 @@ coulcut_list = [i*coul_cutoff for  i in coulcut_rat] # coul-cut values
 
 #---------input details - Bond Coeff--------------------------------
 gen_bond_lst = 1 # Generate bond list
-bname_list   = ['VEC-VEC (no C=O) [1-1]',' MTFSI-MTFSI [3-3]', \
-                'VEC - MTFSI [1-3]' , 'VEC - C=O [1-2]'] #Name of groups
-kspr_list    = [30, 30, 30, 50] # spring constants
-bcon_list    = [[1,1],[3,3],[1,3],[1,2]] # connectivity list
+bname_list   = ['VEC-VEC (no C=O) [1-1]',' VEC - C=O [1-2]', \
+                'VEC - MTFSI [1-3]' , 'MTFSI - MTFSI [3-3]'] #Name of groups
+kspr_list    = [30, 50, 30, 30] # spring constants
+bcon_list    = [[1,1],[1,2],[1,3],[3,3]] # connectivity list
         
 #--------file_lists--------------------------------------------
 f90_files = ['ran_numbers.f90','lmp_params_var.f90','lammps_inp.f90'] 
