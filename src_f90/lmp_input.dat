@@ -1,25 +1,26 @@
- Data file generated for simulation is VECdata_60_0.10.dat
+ Data file generated for simulation is VECdata_60_0.05.dat
  Simulation inputs ....
  ----------System level details-------------------
- Total # of particles/blobs:        28200
+ Total # of particles/blobs:         2340
  # of CG blobs per polymer (VEC) monomer:            2
- Total # of polymer chains:          100
- Total # of chains+unpolymerized mons:         8200
- Total # of anion blobs:          600
- Total # of cations:          600
- Fraction of unpolymerized-mers:   0.600000000000000     
- Total # of monomers:        13500
- Total # of polymerized VEC mons:         5400
- Total # of unpolymerized-mers:         8100
+ Total # of polymer chains:           10
+ Total # of molecules (chains+unpolymerized mons):          580
+ Total # of anion blobs:           30
+ Total # of cations:           30
+ Fraction of unpolymerized-mers:   0.500000000000000     
+ Total # of VEC monomers:         1140
+ Total # of polymerized VEC mons:          570
+ Total # of unpolymerized-mers:          570
  ----------Chain level details--------------------
- Ratio between anions and VEC mons per chain:   0.100000000000000     
- # of blobs per chain:          114
- # of anion blobs per chain:            6
+ Ratio between anions and VEC mons per chain:   5.000000000000000E-002
+ # of VEC monomers per chain:           57
+ # of blobs per chain:          117
+ # of anion blobs per chain:            3
  ----------Box details----------------------------
- LX/LY/LZ:    32.7883609308486        32.7883609308486     
-   32.7883609308486     
- Box volume:    35250.0000000000     
- Density:   0.800000000000000     
+ LX/LY/LZ:    14.0151895961990        14.0151895961990     
+   14.0151895961990     
+ Box volume:    2752.94117647059     
+ Density:   0.850000000000000     
  ----------Topology details-----------------------
  Number of atomtypes:            6
  Number of bondtypes:            5
@@ -27,4 +28,10 @@
  Random Initial Configuration : NRRW
  Generating chain configurations .. 
  Good Charge Neutrality   0.000000000000000E+000
+ ----------For debug----------------------------
+           1           1           2
+           2           1           1
+           3           1          22
+           4           1         298
+           5           1        1161
  Successfully Written Datafile ..
