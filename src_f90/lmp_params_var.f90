@@ -39,8 +39,8 @@ MODULE PARAMS
   INTEGER, PARAMETER :: N_ions    = N_anions + N_cations ! Tot. ions
 
   ! VECs (or uncharged moieties)
-  INTEGER, PARAMETER :: VEC_per_ch   = INT(REAL(M_poly*REAL(1 -&
-       & an_poly_rat)) ! Number of VEC per chain 
+  INTEGER, PARAMETER :: VEC_per_ch   = M_poly - ideal_an_per_ch ! To
+  ! make sure total is M_poly and avoid errors from INT function
   INTEGER, PARAMETER :: T_poly_VEC   = VEC_per_ch*N_poly ! Tot. # of
   ! polymerized VECs in the system
   INTEGER, PARAMETER :: T_VEC_mons   = INT(REAL(T_poly_VEC)/REAL(1&
@@ -73,17 +73,21 @@ MODULE PARAMS
   INTEGER, PARAMETER :: atomic = 0
   INTEGER, PARAMETER :: triblock = 0
   INTEGER, PARAMETER :: stretched = 0
-  INTEGER, PARAMETER :: numatomtypes = CG_per_mon + 2
-  INTEGER, PARAMETER :: numbondtypes = CG_per_mon + 2
+  INTEGER, PARAMETER :: numatomtypes = CG_per_mon*(1 +&
+       & CEILING(frac_unpoly)) + 2
+  INTEGER, PARAMETER :: numbondtypes = (CG_per_mon-1)*(1 +&
+       & CEILING(frac_unpoly)) + 3
   INTEGER, PARAMETER :: numangltypes = 0! 2*CG_per_mon
   INTEGER, PARAMETER :: numdihdtypes = 0
-  INTEGER, PARAMETER :: bondtype = 1
-  INTEGER, PARAMETER :: angltype = 1
-  INTEGER, PARAMETER :: dihdtype = 0
   INTEGER, PARAMETER :: outfile  = 17
-  INTEGER, PARAMETER :: nbonds = N_poly*(blob_per_ch-1)
+  INTEGER, PARAMETER :: nbonds = N_poly*(blob_per_ch-1) +&
+       & T_unpoly_VEC*(CG_per_mon-1)
   INTEGER, PARAMETER :: nangls = 0
   INTEGER, PARAMETER :: ndihds = 0
+
+! Other global variables
+
+  INTEGER :: btype_poly_VEC = 0
 
 ! Global Arrays involved in creating data file
   
@@ -91,6 +95,7 @@ MODULE PARAMS
   REAL,ALLOCATABLE,DIMENSION(:) :: charge
   INTEGER, ALLOCATABLE, DIMENSION(:,:) :: aidvals,ixyz
   INTEGER, ALLOCATABLE, DIMENSION(:,:) :: topo_bond
+  INTEGER, DIMENSION(1:numbondtypes,3) :: bflag_arr
   
 ! Character Arrays for creating the data file name
 

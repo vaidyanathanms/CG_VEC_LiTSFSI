@@ -19,6 +19,7 @@ PROGRAM LAMMPSINP
   
   IF(ierror /= 0) STOP "Cannot open lmp_input.txt"
   
+  CALL SANITY_CHECKS()
   CALL CREATEFILE() 
   CALL COMPUTE_BOX()
   CALL ALLOCATE_ARRAYS()
@@ -26,10 +27,8 @@ PROGRAM LAMMPSINP
   CALL SET_IMGFLAGS()
   CALL LMP_COORD()
   CALL DEALLOCATE_ARRAYS()
-  WRITE(outfile,*) "Successfully Written Datafile .."
-  CLOSE (unit = outfile)
-
-!!$  END IF
+  CALL CROSS_CHECK_NUM_BOND_TYPES()
+  CALL CLEAN_AND_CLOSE_ALL()
 
 END PROGRAM LAMMPSINP
 
@@ -56,8 +55,15 @@ SUBROUTINE LMP_COORD()
        &"write",iostat = ierror)
   
   IF(ierror /= 0) STOP "Failed to open datafile"
-     
-  WRITE (10,*) "Data for CG p(mVEC-r-nLISTSFI) simulations"
+  
+  IF(frac_unpoly == 0) THEN 
+     WRITE (10,*) "Data for CG p(mVEC-r-nLiMTSFI) simulations w/o unpo&
+          &lymerized VEC monomers"
+  ELSE
+     WRITE (10,*) "Data for CG p(mVEC-r-nLiMTSFI) simulations with unp&
+          &olymerized VEC monomers"
+  END IF
+
   WRITE (10,*) 
   WRITE (10,20) totblobs, "atoms"
 
@@ -83,7 +89,7 @@ SUBROUTINE LMP_COORD()
 
  
   WRITE (10,20) numatomtypes, "atom types"
-  WRITE (10,20) numbondtypes, "bond types"
+  WRITE (10,20) SUM(bflag_arr(:,1)), "bond types"
   WRITE (10,22) numangltypes, "angle types"
   WRITE (10,22) numdihdtypes, "dihedral types"
   WRITE (10,22) 0, "improper types"
@@ -101,21 +107,15 @@ SUBROUTINE LMP_COORD()
   WRITE(10,'(I0,1X,F14.8)') 1, 12.4 ! VEC without C=O
   WRITE(10,'(I0,1X,F14.8)') 2, 4.0  ! C=O of VEC
   WRITE(10,'(I0,1X,F14.8)') 3, 48.7 ! MTFSI
-  WRITE(10,'(I0,1X,F14.8)') 4, 1.0  ! Li
 
   IF(frac_unpoly .NE. 0.0) THEN
-     WRITE(10,'(I0,1X,F14.8)') 5, 12.4 ! unpolymerized VEC w/o C=O 
-     WRITE(10,'(I0,1X,F14.8)') 6, 4.0  ! C=O of unpolymerized VEC
+     WRITE(10,'(I0,1X,F14.8)') 4, 12.4 ! unpolymerized VEC w/o C=O 
+     WRITE(10,'(I0,1X,F14.8)') 5, 4.0  ! C=O of unpolymerized VEC
   END IF
 
-!!$  DO i = 1,numatomtypes
-!!$
-!!$     massval = 1.000
-!!$     WRITE(10,'(I0,1X,F14.8)') i, massval
-!!$
-!!$  END DO
+  WRITE(10,'(I0,1X,F14.8)') 6, 1.0  ! Li
 
-  ! Writing atomic corrdinates
+  ! Writing atomic coordinates
   
   WRITE (10,*) 
   WRITE (10,*) "Atoms"
@@ -142,7 +142,6 @@ SUBROUTINE LMP_COORD()
 
      ! Writing Bond Details  
      
-     bondid = 0
      WRITE (10,*)
      WRITE (10,*) "Bonds"
      WRITE (10,*)
@@ -304,17 +303,19 @@ SUBROUTINE COMPUTE_BOX()
   WRITE(outfile,*) "# of CG blobs per polymer (VEC) monomer: ",&
        & CG_per_mon
   WRITE(outfile,*) "Total # of polymer chains: ", N_poly
-  WRITE(outfile,*) "Total # of chains+unpolymerized mons: ", nmols
+  WRITE(outfile,*) "Total # of molecules (chains+unpolymerized mons): &
+       &", nmols
   WRITE(outfile,*) "Total # of anion blobs: ", N_anions
   WRITE(outfile,*) "Total # of cations: ", N_cations
   WRITE(outfile,*) "Fraction of unpolymerized-mers: ", frac_unpoly
-  WRITE(outfile,*) "Total # of monomers: ", T_VEC_mons
+  WRITE(outfile,*) "Total # of VEC monomers: ", T_VEC_mons
   WRITE(outfile,*) "Total # of polymerized VEC mons: ", T_poly_VEC
   WRITE(outfile,*) "Total # of unpolymerized-mers: ", T_unpoly_VEC
   
   WRITE(outfile,*) "----------Chain level details--------------------"
   WRITE(outfile,*) "Ratio between anions and VEC mons per chain: ",&
        & an_poly_rat
+  WRITE(outfile,*) "# of VEC monomers per chain: ", VEC_per_ch
   WRITE(outfile,*) "# of blobs per chain: ", blob_per_ch
   WRITE(outfile,*) "# of anion blobs per chain: ", ideal_an_per_ch
 
@@ -339,7 +340,8 @@ SUBROUTINE INPCOR()
   IMPLICIT NONE
   
   INTEGER :: i,j,k,u,v,ierror,un_chid
-  INTEGER :: an_per_ch,bondid_new, bondtemp, cgcnt, poly_mon
+  INTEGER :: an_per_ch, cgcnt, poly_mon
+  INTEGER :: bid_start, bondid_new, bondtemp
   REAL, PARAMETER :: r0init  = 0.97
   REAL, PARAMETER :: r0sq3   = r0init/sqrt(3.0)
   REAL, PARAMETER :: rmaxsq  = r0init*r0init
@@ -358,12 +360,12 @@ SUBROUTINE INPCOR()
 
   WRITE(outfile,*) "Generating chain configurations .. "
 
-  i = 1; bondid_new = 0
+  i = 1; bondid_new = 0; bflag_arr = 0
 
   ! Polymerized chains
   DO WHILE (i .LE. N_poly)
 
-     bondtemp = bondid_new
+     bondtemp = bondid_new; bid_start = bondid_new + 1
      an_per_ch = 0
      cgcnt = 1
      j = 1
@@ -418,8 +420,9 @@ SUBROUTINE INPCOR()
            ! bounds
            CALL CHECK_ARRAY_BOUNDS(i,k+1,bondtemp,arr_bound)
 
+           ! Generate anions bonded to the backbone
            IF (arr_bound .EQV. .TRUE.) THEN
-              ! Generate anions bonded to the backbone
+              
               aidvals(k+1,1) = k + 1
               aidvals(k+1,2) = i
               aidvals(k+1,3) = CG_per_mon + 1
@@ -437,7 +440,7 @@ SUBROUTINE INPCOR()
                  PRINT *, "WRONG CHOICE" , k
                  STOP
                  
-              ELSE !poly_mon - anion bond
+              ELSE ! poly_mon - anion bond
                  rxyz(k+1,1) = rxyz(k+1-CG_per_mon,1) + r0init&
                       &*sin(theta)*cos(phi)
                  rxyz(k+1,2) = rxyz(k+1-CG_per_mon,2) + r0init&
@@ -479,8 +482,7 @@ SUBROUTINE INPCOR()
                  aidvals(k,2) = i
                  aidvals(k,3) = cgcnt
                  charge(k)    = (0.5*(1+CG_per_mon)-REAL(cgcnt))*2*charge_poly
-                 
-                 
+
                  IF (cgcnt == 1) THEN
                     IF(aidvals(k-1,3) == CG_per_mon + 1) THEN !poly_mon-anion
                        rxyz(k,1) = rxyz(k-1,1) + r0init*sin(theta)&
@@ -531,21 +533,25 @@ SUBROUTINE INPCOR()
 
      IF (an_per_ch == ideal_an_per_ch) THEN
 
-        i = i + 1
         bondid_new = bondtemp
-
+        CALL CHECK_BOND_TYPES(i, bid_start, bondid_new)
+        i = i + 1
+        
      END IF
      
   END DO
+
+  btype_poly_VEC = SUM(bflag_arr(:,1)) ! # of btypes in poly_VEC
 
   PRINT *, "---------Polymerized chain data-------------------"
   PRINT *, "Ideal number of polymer blobs: ", N_poly*blob_per_ch
   PRINT *, "Total number of polymer blobs: ", k
   PRINT *, "NCations, NAnions ", N_cations, N_anions
+  PRINT *, "Number of bond types in poly VEC: ", btype_poly_VEC
   PRINT *, "------Generated polymerized chains----------------"
 
 ! Create unpolymerized polymer (VEC) monomers
-  DO un_chid = i+1, i+T_unpoly_VEC 
+  DO un_chid = i, i+T_unpoly_VEC-1
 
      ! Head VEC blob
      k = k + 1; cgcnt = 1
@@ -557,15 +563,16 @@ SUBROUTINE INPCOR()
 
      ! Create atom types here
      aidvals(k,1) = k ! Atom ID
-     aidvals(k,2) = i ! Mol ID
+     aidvals(k,2) = un_chid ! Mol ID
      aidvals(k,3) = CG_per_mon + 2 ! Atom type
      charge(k)    = (0.5*(1+CG_per_mon)-REAL(cgcnt))*2*charge_poly   
-
+     
+     IF(un_chid == i) bid_start = bondtemp + 1
      DO cgcnt = 2, CG_per_mon
 
         k = k + 1
         bondtemp  = bondtemp + 1
-       
+        
         theta     = math_pi*RAN1(X)
         phi       = 2*math_pi*RAN1(X)
         rxyz(k,1) = rxyz(k-1,1) + r0init*sin(theta)*cos(phi)
@@ -573,12 +580,16 @@ SUBROUTINE INPCOR()
         rxyz(k,3) = rxyz(k-1,3) + r0init*cos(theta)
         aidvals(k,1) = k
         aidvals(k,2) = un_chid
-        aidvals(k,3) = CG_per_mon + cgcnt + 1 !cgcnt is from 2
+        aidvals(k,3) = CG_per_mon + cgcnt + 1 !cgcnt is from 2; so +1
         charge(k)    = (0.5*(1+CG_per_mon)-REAL(cgcnt))*2*charge_poly 
         CALL ASSIGN_BOND_TOPO(bondtemp,aidvals(k-1,1),aidvals(k,1)&
              &,260)
         
      END DO
+
+     ! For consistency in bflag_arr
+     IF(un_chid == i) CALL CHECK_BOND_TYPES(un_chid,bid_start&
+          &,bondtemp)
 
   END DO
   PRINT *, "------Generated unpolymerized chains--------------"
@@ -630,7 +641,7 @@ SUBROUTINE INPCOR()
      WRITE(outfile,*) "System not charge neutral", csum
      PRINT *, "ERROR: System not charge neutral", csum
      CLOSE(93)
-!     STOP
+     STOP
      
   ELSE
 
@@ -701,15 +712,16 @@ SUBROUTINE ASSIGN_BOND_TOPO(bid,aid1,aid2,iderr)
 
   ELSE !Unpolymerized VEC molecules
 
-     btype = CG_per_mon + 3
+     ! Accounts for anion-anion bonding not formed
+     btype = min(atype1,atype2) + btype_poly_VEC - (CG_per_mon + 1)
 
   END IF
-    
+
   topo_bond(bid,1) = bid
   topo_bond(bid,2) = btype
   topo_bond(bid,3) = aid1
   topo_bond(bid,4) = aid2
-  
+
 END SUBROUTINE ASSIGN_BOND_TOPO
 !--------------------------------------------------------------------
 
@@ -725,7 +737,8 @@ SUBROUTINE CREATEFILE() !CREATEFILE(narg)
   WRITE(nmon_char,"(I0)") M_poly
   WRITE(frat_char,"(F4.2)") an_poly_rat
 
-  datafile = prefix//'_'//trim(adjustl(nmon_char))//'_'//trim(adjustl(frat_char))//'.dat'
+  datafile = prefix//'_'//trim(adjustl(nmon_char))//'_'&
+       &//trim(adjustl(frat_char))//'.dat'
      
   WRITE(outfile,*) "Data file generated for simulation is ",&
        & trim(datafile)
@@ -751,12 +764,80 @@ SUBROUTINE ALLOCATE_ARRAYS()
   IF(AllocateStatus /= 0) STOP "Could not allocate aidvals"
   ALLOCATE(ixyz(1:totblobs,3), Stat=AllocateStatus)
   IF(AllocateStatus /= 0) STOP "Could not allocate ixyz"
-  ALLOCATE(topo_bond(1:nbonds,4), Stat=AllocateStatus)
+  ALLOCATE(topo_bond(1:2*nbonds,4), Stat=AllocateStatus)
   IF(AllocateStatus /= 0) STOP "Could not allocate topo_bonds"
-
 
 END SUBROUTINE ALLOCATE_ARRAYS
 
+!--------------------------------------------------------------------
+
+SUBROUTINE CHECK_BOND_TYPES(chid,bid1,bid2)
+
+  USE PARAMS
+  IMPLICIT NONE
+  INTEGER, INTENT(IN) :: chid, bid1, bid2
+  INTEGER :: bchk, btyp_cnt
+
+  ! Check if btype is present for angle generation by VMD
+  DO bchk = bid1, bid2
+     DO btyp_cnt = 1, numbondtypes
+        IF(topo_bond(bchk,2) == btyp_cnt .AND. bflag_arr(btyp_cnt,1) &
+             &== 0) THEN
+           bflag_arr(btyp_cnt,1) = 1
+           bflag_arr(btyp_cnt,2) = bchk ! First instance - bid
+           bflag_arr(btyp_cnt,3) = chid ! First instance - chid
+        END IF
+     END DO
+  END DO
+
+END SUBROUTINE CHECK_BOND_TYPES
+!--------------------------------------------------------------------
+
+SUBROUTINE CROSS_CHECK_NUM_BOND_TYPES()
+  
+  USE PARAMS
+  IMPLICIT NONE
+  INTEGER :: i
+
+  WRITE(outfile,*) "----------For debug----------------------------"
+  DO i = 1, numbondtypes
+     WRITE(outfile,*) i, bflag_arr(i,1), bflag_arr(i,2)
+  END DO
+ 
+  IF(SUM(bflag_arr(:,1)) .NE. numbondtypes) THEN
+     WRITE(outfile,*) "Some bond types (mostly anion-anion) are not fo&
+          &rmed. See above!"
+  END IF
+
+END SUBROUTINE CROSS_CHECK_NUM_BOND_TYPES
+!--------------------------------------------------------------------
+
+SUBROUTINE SANITY_CHECKS()
+
+  USE PARAMS
+  IMPLICIT NONE
+
+  IF(ideal_an_per_ch < 1) THEN
+     
+     PRINT *, "ERROR: an_poly_rat in lmp_params.f90 is too small"
+     PRINT *, "Ideal anions per chain: ", ideal_an_per_ch
+     PRINT *, "Consider changing ideal_an_per_ch"
+     STOP
+
+  END IF
+     
+END SUBROUTINE SANITY_CHECKS
+!--------------------------------------------------------------------
+
+SUBROUTINE CLEAN_AND_CLOSE_ALL()
+
+  USE PARAMS
+  IMPLICIT NONE
+
+  WRITE(outfile,*) "Successfully Written Datafile .."
+  CLOSE (unit = outfile)
+
+END SUBROUTINE CLEAN_AND_CLOSE_ALL
 !--------------------------------------------------------------------
 
 SUBROUTINE DEALLOCATE_ARRAYS()
