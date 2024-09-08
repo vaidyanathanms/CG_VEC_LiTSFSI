@@ -29,13 +29,13 @@ from my_python_functions import clean_backup_initfiles
 restart   = 0  # For restarting from given configurations
 num_hrs   = 23 # Total number of hours for run
 num_nodes = 1  # Number of nodes
-num_cores = 64 # Number of cores per node
+num_cores = 36 # Number of cores per node
 hpc_sys   = 'kestrel'  # Opt: kestrel, cades
 
 #---------input details - Topology--------------------------------
-frac_anions  = [1/3]#,1/20,1/10,1/6,1/5,1/3] # fraction of anions
+frac_anions  = [1/5,1/10,1/15,1/20]#,1/20,1/10,1/6,1/5,1/3] # fraction of anions
 tot_mons     = 6000 # total number of MONOMERS in the poly CHAIN
-chain_mw     = [60]#,60,90] # of monomer range per chain
+chain_mw     = [60,40]#,60,90] # of monomer range per chain
 num_chains   = [int(tot_mons/x) for x in chain_mw] # of polymerized ch
 unpoly_farr  = [0.6] # fraction of unpolymerized mons
 density      = 0.8 # system density
@@ -48,10 +48,21 @@ gen_pair_lst = 1 # Generate pair list
 ntypes       = 4 # Number of types
 lj_cutoff    = float(2**(1.0/6.0)) # LJ cut-off in sigma
 coul_cutoff  = 10.0 # Coulumb cut-off in sigma
-name_list    = ['VEC without C=O','C=O of VEC','MTFSI','Li'] # Name of groups
-eps_list     = [1, 1, 1, 1] # epsilon values
-sig_list     = [1,1,1,1] # sigma values
+name_list    = ['VEC without C=O','C=O of VEC','STFSI'] # Name of groups
+eps_list     = [1, 1, 1] # epsilon values
+sig_list     = [1,1,1] # sigma values
 
+if max(unpoly_farr) > 0: # unpolymerized VEC
+    name_list.extend(['unpoly_VEC: VEC','unpoly_VEC: C=O'])
+    eps_list.extend([1,1])
+    sig_list.extend([1,1])
+
+# Cation pair coefficient values
+name_list.append('Li')
+eps_list.append(1)
+sig_list.append(1)
+
+#-----------input details: pair cut-off-----------------------------    
 ljcut_list   = [i*lj_cutoff for i in sig_list] # lj-cut values [2.7,3.2,6,2.5]
 coulcut_rat  = [1.0,1.0,1.0,1.0] #coulumbic cut off ratio
 coulcut_list = [i*coul_cutoff for  i in coulcut_rat] # coul-cut values
@@ -59,10 +70,16 @@ coulcut_list = [i*coul_cutoff for  i in coulcut_rat] # coul-cut values
 #---------input details - Bond Coeff--------------------------------
 gen_bond_lst = 1 # Generate bond list
 bname_list   = ['VEC-VEC (no C=O) [1-1]',' VEC - C=O [1-2]', \
-                'VEC - MTFSI [1-3]' , 'MTFSI - MTFSI [3-3]'] #Name of groups
+                'VEC - STFSI [1-3]' , 'STFSI - STFSI [3-3]'] #Name of groups
 kspr_list    = [30, 50, 30, 30] # spring constants
 bcon_list    = [[1,1],[1,2],[1,3],[3,3]] # connectivity list
-        
+
+if max(unpoly_farr) > 0: # unpolymerized VEC
+    ntypes = 6
+    bname_list.append('unpoly_VEC: VEC - unpoly_VEC: C=O [4-5]')
+    kspr_list.append(50) 
+    bcon_list.append([4,5])
+
 #--------file_lists--------------------------------------------
 f90_files = ['ran_numbers.f90','lmp_params_var.f90','lammps_inp.f90'] 
 lmp_files = ['in.init_var','in.nve','in.npt','jobmain_var.sh']
