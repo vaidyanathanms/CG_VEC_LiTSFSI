@@ -75,8 +75,8 @@ def create_paramfyl_for_datafyl(destdir,inpfyle,nchains,mw_chain\
     fid = fr.read().replace("py_nchains",str(nchains)).\
           replace("py_mwchain",str(mw_chain)).\
           replace("py_casenum",str(casenum)).\
-          replace("py_fracanions",str(unpoly_frac)).\
-          replace("py_unpoly_frac",str(fr_an)).\
+          replace("py_fracanions",str(fr_an)).\
+          replace("py_unpoly_frac",str(unpoly_frac)).\
           replace("py_chargblob",str(blob_charge)).\
           replace("py_cgpermon",str(cg_per_mon)).\
           replace("py_density",str(dens))
