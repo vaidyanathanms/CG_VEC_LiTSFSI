@@ -71,10 +71,19 @@ lmp_long  = ['in.npt','in.rdf','jobmain_long_var.sh']
 
 #---------directory info---------------------------------------
 maindir = os.getcwd() #src_py dir
-src_f90    = '/home/vaidyams/all_codes/CG_VEC_LiTSFSI/src_f90' #src_f90 dir
-src_lmp    = '/home/vaidyams/all_codes/CG_VEC_LiTSFSI/src_lmp' #src_lmp dir
-src_tcl    = '/home/vaidyams/all_codes/CG_VEC_LiTSFSI/src_tcl' #src_tcl dir
-scratchdir = '/scratch/vaidyams/cg_sic' #output headdir
+if hpc_sys == 'kestrel':
+    home_path = '/home/vaidyams'
+    scr_path  = '/scratch/vaidyams'
+elif hpc_sys == 'cades':
+    home_path = '/home/vm5'
+    scr_path  = '/lustre/or-scratch/cades-birthright/vm5'
+else:
+    raise RuntimeError('Unknown HPC system ' + hpc_sys)
+    
+src_f90    = home_path + '/all_codes/CG_VEC_LiTSFSI/src_f90' #src_f90 dir
+src_lmp    = home_path + '/all_codes/CG_VEC_LiTSFSI/src_lmp' #src_lmp dir
+src_tcl    = home_path + '/all_codes/CG_VEC_LiTSFSI/src_tcl' #src_tcl dir
+scratchdir = scr_path  + '/cg_sic' #output headdir
 scr_head   = 'sic_mixedvec_listsfi' # head dir scratch'
 
 #--------lammps executable-------------------------------------
