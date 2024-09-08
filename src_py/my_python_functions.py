@@ -32,7 +32,7 @@ def init_pdi_write(freepdi, freemw,freechains,\
     finit.close()
 
 
-def compile_and_run_pdi(destdir):
+def compile_and_run_pdi(destdir,f90_comp):
     
     os.chdir(destdir)
     if not os.path.exists('init_pdi.txt'):
@@ -46,7 +46,7 @@ def compile_and_run_pdi(destdir):
     # Generate PDI data
 
     print( "Running FORTRAN script for generating PDI files")
-    subprocess.call(["ifort","-r8","-check","-traceback",
+    subprocess.call([f90_comp,"-r8","-check","-traceback",
                      "SZDist2.f90","-o","pdiinp.o"])
 
     subprocess.call(["./pdiinp.o"])
@@ -62,7 +62,7 @@ def check_pdi_files(destdir,pdi_files,flagcheck):
 
 def create_paramfyl_for_datafyl(destdir,inpfyle,nchains,mw_chain\
                                 ,casenum,fr_an,dens=0.85,cg_per_mon=2,\
-                                blob_charge = 0.25):
+                                blob_charge = 0.25,unpoly_frac=0.5):
 
 
     lmpinp = "lmpinp_" + str(mw_chain)+"_" + str("{:.2f}".format(fr_an)) + "_" +str(casenum)+".f90"
@@ -75,7 +75,8 @@ def create_paramfyl_for_datafyl(destdir,inpfyle,nchains,mw_chain\
     fid = fr.read().replace("py_nchains",str(nchains)).\
           replace("py_mwchain",str(mw_chain)).\
           replace("py_casenum",str(casenum)).\
-          replace("py_fracanions",str(fr_an)).\
+          replace("py_fracanions",str(unpoly_frac)).\
+          replace("py_unpoly_frac",str(fr_an)).\
           replace("py_chargblob",str(blob_charge)).\
           replace("py_cgpermon",str(cg_per_mon)).\
           replace("py_density",str(dens))
@@ -86,7 +87,7 @@ def create_paramfyl_for_datafyl(destdir,inpfyle,nchains,mw_chain\
 
     return lmpinp,datafyle
 
-def compile_and_run_inpgenfyles(lmpinp,destdir):
+def compile_and_run_inpgenfyles(lmpinp,destdir,f90_comp='ifort'):
 
     os.chdir(destdir)
     if not os.path.exists('ran_numbers.f90'):
@@ -96,7 +97,7 @@ def compile_and_run_inpgenfyles(lmpinp,destdir):
     if not os.path.exists('lammps_inp.f90'):
         raise RuntimeError('lammps_inp.f90 not found in ' + destdir)
 
-    subprocess.call(['ifort','-r8','-qopenmp','-check','-traceback',\
+    subprocess.call([f90_comp,'-r8','-qopenmp','-check','-traceback',\
                      'ran_numbers.f90',lmpinp,'lammps_inp.f90',\
                      '-o','inpgen.o'])
     subprocess.call('./inpgen.o')
@@ -222,7 +223,7 @@ def clean_backup_initfiles(f90_files,tcl_files,lmpinp1,lmpinp2,destdir):
         os.remove(fyl)
 
 
-def compile_anafiles():
+def compile_anafiles(f90_comp):
 
     if not os.path.exists('pe_params.f90'):
         print('ERROR: pe_params.f90 not found')
@@ -233,7 +234,7 @@ def compile_anafiles():
         return
 
 
-    subprocess.call(['ifort','-r8','-qopenmp','-mkl',\
+    subprocess.call([f90_comp,'-r8','-qopenmp','-mkl',\
                      '-check','-traceback','pe_params.f90',\
                      'pe_analyze.f90','-o','anainp.o'])
 
