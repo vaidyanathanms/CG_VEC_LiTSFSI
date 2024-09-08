@@ -30,7 +30,7 @@ restart   = 0  # For restarting from given configurations
 num_hrs   = 23 # Total number of hours for run
 num_nodes = 1  # Number of nodes
 num_cores = 36 # Number of cores per node
-hpc_sys   = 'kestrel'  # Opt: kestrel, cades
+hpc_sys   = 'cades'  # Opt: kestrel, cades
 
 #---------input details - Topology--------------------------------
 frac_anions  = [1/5,1/10,1/15,1/20]#,1/20,1/10,1/6,1/5,1/3] # fraction of anions
@@ -109,8 +109,8 @@ if hpc_sys == 'kestrel':
     lmp_exe    = 'lmp' # lmp executable file
     f90_comp   = 'ifx' # FORTRAN compiler
 elif hpc_sys == 'cades':
-    lmpexe_dir = '/home/vaidyams/all_codes/mylammps/src' #lmp executable path
-    lmp_exe    = '/lmp_mpi' # lmp executable file
+    lmpexe_dir = home_path + '/mylammps/src' #lmp executable path
+    lmp_exe    = 'lmp_mpi' # lmp executable file
     f90_comp   = 'ifort'
 else:
     raise RuntimeError('Unknown HPC system ' + hpc_sys)
