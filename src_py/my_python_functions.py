@@ -162,7 +162,7 @@ def run_lammps(mw_chain,fr_anion,casenum,inpjob,outjob,tot_hrs,tot_nodes,tot_cor
     if not os.path.exists(inpjob):
         raise RuntimeError('ERROR: ' + inpjob + ' not found')
     
-    jobstr = "job_" + str(mw_chain) + "_" + str(fr_anion) + "_" \
+    jobstr = "si" + str(mw_chain) + "_" + str(fr_anion) + "_" \
              + str(casenum)
     fr  = open(inpjob,'r')
     fw  = open(outjob,'w')
