@@ -26,16 +26,18 @@ from my_python_functions import clean_backup_initfiles
 
 #---------input flags------------------------------------------
 #0-initial run  1- production
-restart   = 1  # For restarting from given configurations
+restart   = 0  # For restarting from given configurations
 num_hrs   = 23 # Total number of hours for run
 num_nodes = 1  # Number of nodes
-num_cores = 96 # Number of cores per node
+num_cores = 64 # Number of cores per node
+hpc_sys   = 'kestrel'  # Opt: kestrel, cades
 
 #---------input details - Topology--------------------------------
-frac_anions  = [1/30,1/20,1/10,1/6,1/5,1/3] # fraction of anions
-tot_mons     = 6000 # total number of MONOMERS
-chain_mw     = [30,60,90] # of monomer range per chain
-num_chains   = [tot_mons/x for x in chain_mw]
+frac_anions  = [1/3]#,1/20,1/10,1/6,1/5,1/3] # fraction of anions
+tot_mons     = 6000 # total number of MONOMERS in the poly CHAIN
+chain_mw     = [60]#,60,90] # of monomer range per chain
+num_chains   = [int(tot_mons/x) for x in chain_mw] # of polymerized ch
+unpoly_farr  = [0.6] # fraction of unpolymerized mons
 density      = 0.8 # system density
 cg_per_mon   = 2 # number of blobs per polymer monomer
 blob_charge  = 0.2 # charge per blob
@@ -69,14 +71,28 @@ lmp_long  = ['in.npt','in.rdf','jobmain_long_var.sh']
 
 #---------directory info---------------------------------------
 maindir = os.getcwd() #src_py dir
-src_f90    = '/home/vm5/CG_VEC_LiTSFSI/src_f90' #src_f90 dir
-src_lmp    = '/home/vm5/CG_VEC_LiTSFSI/src_lmp' #src_lmp dir
-src_tcl    = '/home/vm5/CG_VEC_LiTSFSI/src_tcl' #src_tcl dir
-scratchdir = '/lustre/or-scratch/cades-birthright/vm5/cg_sic' #output dir
-lmpexe_dir = '/home/vm5/mylammps/src' #lmp executable path
-lmp_exe    = '/lmp_mpi' # lmp executable file
-scr_head   = 'sic_vec_listsfi' # head dir scratch sic_vec_listsfi'
-   
+src_f90    = '/home/vaidyams/all_codes/CG_VEC_LiTSFSI/src_f90' #src_f90 dir
+src_lmp    = '/home/vaidyams/all_codes/CG_VEC_LiTSFSI/src_lmp' #src_lmp dir
+src_tcl    = '/home/vaidyams/all_codes/CG_VEC_LiTSFSI/src_tcl' #src_tcl dir
+scratchdir = '/scratch/vaidyams/cg_sic' #output headdir
+scr_head   = 'sic_mixedvec_listsfi' # head dir scratch'
+
+#--------lammps executable-------------------------------------
+if hpc_sys == 'kestrel':
+    lmpexe_dir = 'None' # Using kestrel compiled lammps
+    lmp_exe    = 'lmp' # lmp executable file
+    f90_comp   = 'ifx' # FORTRAN compiler
+elif hpc_sys == 'cades':
+    lmpexe_dir = '/home/vaidyams/all_codes/mylammps/src' #lmp executable path
+    lmp_exe    = '/lmp_mpi' # lmp executable file
+    f90_comp   = 'ifort'
+else:
+    raise RuntimeError('Unknown HPC system ' + hpc_sys)
+
+#--------Create scratchdir------------------------------------
+if not os.path.isdir(scratchdir):
+    os.mkdir(scratchdir)
+
 #---------main analysis---------------------------------------
 for mw_ch in range(len(chain_mw)):
     
@@ -112,7 +128,6 @@ for mw_ch in range(len(chain_mw)):
                 print( "Starting case", casenum, "for f_anion/MW_chains: ",\
                        frac_anions[fr_an],chain_mw[mw_ch])
 
-
                 #---Copying files------
                 print( "Current Dir ", destdir)
                 print( "Copying Files")
@@ -126,19 +141,24 @@ for mw_ch in range(len(chain_mw)):
                 for fyllist in range(len(tcl_files)):
                     cpy_main_files(src_tcl,destdir,tcl_files[fyllist])
 
-                srcfyl = lmpexe_dir + '/' + lmp_exe
-                desfyl = destdir + '/' + lmp_exe
-                shutil.copy2(srcfyl, desfyl)
+                if lmpexe_dir.lower() != 'None'.lower():
+                    srcfyl = lmpexe_dir + '/' + lmp_exe
+                    desfyl = destdir + '/' + lmp_exe
+                    shutil.copy2(srcfyl, desfyl)
 
                 #----Generate input files-----
                 print( "Copy Successful - Generating Input Files")
                 tot_chains = num_chains[mw_ch]
+                if len(unpoly_farr) == 1:
+                    unpoly_frac = unpoly_farr[0]
+                else:
+                    unpoly_frac = unpoly_farr[fr_an]
                 lmp_par,lmp_data_fyle = create_paramfyl_for_datafyl(destdir,'lmp_params_var.f90',num_chains[mw_ch],\
                                                                     chain_mw[mw_ch],casenum,\
                                                                     round(frac_anions[fr_an],2),density,\
-                                                                    cg_per_mon,blob_charge)
+                                                                    cg_per_mon,blob_charge,unpoly_frac=unpoly_frac)
 
-                compile_and_run_inpgenfyles(lmp_par,destdir)            
+                compile_and_run_inpgenfyles(lmp_par,destdir,f90_comp=f90_comp)            
 
 
                 #----Generate angle details-----
@@ -194,10 +214,11 @@ for mw_ch in range(len(chain_mw)):
                     cpy_main_files(src_lmp,destdir,lmp_long[fyllist])
 
                 fylename = destdir + '/' + lmp_exe
-                if not fylename: 
-                    srcfyl = lmpexe_dir + '/' + lmp_exe
-                    desfyl = destdir + '/' + lmp_exe
-                    shutil.copy2(srcfyl, desfyl)
+                if not fylename:
+                    if not lmpexe_dir.lower() != 'None'.lower():
+                        srcfyl = lmpexe_dir + '/' + lmp_exe
+                        desfyl = destdir + '/' + lmp_exe
+                        shutil.copy2(srcfyl, desfyl)
 
                 run_lammps(chain_mw[mw_ch],round(frac_anions[fr_an],2),casenum,\
                            'jobmain_long_var.sh','jobmain_long.sh',num_hrs,num_nodes,num_cores)
