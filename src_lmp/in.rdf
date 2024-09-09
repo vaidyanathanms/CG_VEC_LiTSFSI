@@ -1,0 +1,76 @@
+#####################################################
+# Stage 4: RDF run in NVE ensemble with Langevin    #
+# Version: May-20-2024                              #
+#####################################################
+
+# Initialization
+units		lj
+boundary	p p p
+atom_style	full
+log 		log.txt
+read_restart	restart1
+
+# Neighbor information
+neighbor        0.3 bin
+neigh_modify	every 10 one 10000
+
+#####################################################
+# Interaction parameters
+#####################################################
+
+# Pair Information
+pair_style      lj/cut/coul/long 1.122462 10.0
+pair_modify	shift yes
+kspace_style	pppm 0.00001
+dielectric	1
+
+# Pair Coeffs
+pair_coeff	* * 1 1 # Currently all are equal
+
+# Bond Information
+bond_style	harmonic
+special_bonds   lj/coul 0 0 1
+
+# Bond Coeffs
+include         bond_info_file.dat
+
+# Angle Information
+angle_style  cosine/squared
+
+# Angle Coeffs
+angle_coeff * 3 110   # Set as default to account for the absence of 3-3-3
+angle_coeff 1 3 110   # 1 -> 1-1-1
+angle_coeff 2 5 70    # 2 -> 1-1-2 -> Stronger angle
+angle_coeff 3*5 3 110 # 3-5 -> 1-1-3;1-3-1;1-3-3
+angle_coeff 6 3 70    # 6 -> 2-1-3
+
+# Dihedral Information
+dihedral_style	none
+improper_style 	none
+
+# Write Atoms and Other Details
+variable        ts equal step
+thermo_style	custom step temp press evdwl ecoul epair ebond eangle etotal
+thermo          1000
+dump            main all custom 2500 config_${ts}.lammpstrj id type xu yu zu
+
+
+# Compute RDF
+compute myrdf all rdf 50 1 4 2 4 3 4
+fix rdf all ave/time 100 10 1000 c_myrdf[*] file tmp.rdf mode vector
+
+#####################################################
+# Ensemble for calculation - NVE  (Langevin)
+#####################################################
+
+# Main Fixes - NPT
+fix 1 all nve langevin 1.0 1.0 6.99 904297 
+
+# Run Styles
+run_style verlet
+restart   5000 restart1 restart2
+restart   500000 archival_*.restart
+timestep  0.01
+run	  2000000
+unfix 1
+write_restart 	restart_RDF.dat
