@@ -65,6 +65,6 @@ run_style verlet
 restart   5000 restart1 restart2
 restart   500000 archival_*.restart
 timestep  0.01
-run	  10000000
+run	  16100000 upto
 unfix 1
 write_restart 	restart_NPT.dat

@@ -74,7 +74,7 @@ run_style verlet
 restart   5000 restart1 restart2
 restart   50000 archival_*.restart
 timestep  0.01
-run	  100000
+run	  100000 upto
 unfix 1
 unfix 2
 write_restart 	restart_init.dat
