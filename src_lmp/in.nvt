@@ -6,10 +6,10 @@
 
 # Initialization
 units		lj
-boundary	p p f
+boundary	p p p
 atom_style	full
 log 		log.txt
-read_restart	restart1
+read_restart	archival_*.restart
 
 # Neighbor information
 neighbor        0.3 bin

@@ -5,7 +5,7 @@
 
 # Initialization
 units		lj
-boundary	p p f
+boundary	p p p
 atom_style	full
 log 		log.txt
 read_restart	restart1
