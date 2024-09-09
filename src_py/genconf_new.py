@@ -26,14 +26,14 @@ from my_python_functions import clean_backup_initfiles
 
 #---------input flags------------------------------------------
 #0-initial run  1- production
-restart   = 0  # For restarting from given configurations
-num_hrs   = 23 # Total number of hours for run
-num_nodes = 1  # Number of nodes
+restart   = 1  # For restarting from given configurations
+num_hrs   = 47 # Total number of hours for run
+num_nodes = 2  # Number of nodes
 num_cores = 36 # Number of cores per node
 hpc_sys   = 'cades'  # Opt: kestrel, cades
 
 #---------input details - Topology--------------------------------
-frac_anions  = [1/5,1/10,1/15,1/20]#,1/20,1/10,1/6,1/5,1/3] # fraction of anions
+frac_anions  = [1/5]#,1/10,1/15,1/20]#,1/20,1/10,1/6,1/5,1/3] # fraction of anions
 tot_mons     = 6000 # total number of MONOMERS in the poly CHAIN
 chain_mw     = [60,40]#,60,90] # of monomer range per chain
 num_chains   = [int(tot_mons/x) for x in chain_mw] # of polymerized ch
@@ -82,9 +82,9 @@ if max(unpoly_farr) > 0: # unpolymerized VEC
 
 #--------file_lists--------------------------------------------
 f90_files = ['ran_numbers.f90','lmp_params_var.f90','lammps_inp.f90'] 
-lmp_files = ['in.init_var','in.nve','in.npt','jobmain_var.sh']
+lmp_files = ['in.init_var','in.nve','in.nvt','in.npt','jobmain_var.sh']
 tcl_files = ['guessangle_var.tcl'] 
-lmp_long  = ['in.npt','in.rdf','jobmain_long_var.sh']
+lmp_long  = ['in.nvt','in.npt','in.rdf','jobmain_long_var.sh']
 
 #---------directory info---------------------------------------
 maindir = os.getcwd() #src_py dir
@@ -140,6 +140,11 @@ for mw_ch in range(len(chain_mw)):
         if not os.path.isdir(workdir_super):
             os.mkdir(workdir_super)
 
+        if len(unpoly_farr) == 1:
+            unpoly_frac = unpoly_farr[0]
+        else:
+            unpoly_frac = unpoly_farr[fr_an]
+
         for casenum in range(1,nrepeats+1):
 
             workdir_main = workdir_super + '/Case_' + str(casenum)
@@ -175,10 +180,6 @@ for mw_ch in range(len(chain_mw)):
                 #----Generate input files-----
                 print( "Copy Successful - Generating Input Files")
                 tot_chains = num_chains[mw_ch]
-                if len(unpoly_farr) == 1:
-                    unpoly_frac = unpoly_farr[0]
-                else:
-                    unpoly_frac = unpoly_farr[fr_an]
                 lmp_par,lmp_data_fyle = create_paramfyl_for_datafyl(destdir,'lmp_params_var.f90',num_chains[mw_ch],\
                                                                     chain_mw[mw_ch],casenum,\
                                                                     round(frac_anions[fr_an],2),density,\
@@ -212,9 +213,11 @@ for mw_ch in range(len(chain_mw)):
 
             else:
 
-                print("%s\t %g\t %d\t %s\t %d\t" 
-                      %("Restarting simulation for nchains/mw_chains/fr_anion/casenum",
-                        num_chains[mw_ch],chain_mw[mw_ch],round(frac_anions[fr_an],2),casenum))
+                print("%s\t %g\t %d\t %s\t %g %d\t" 
+                      %("Restarting simulation for nchains/mw_chains/fr_anion/unpoly_frac,casenum",\
+                        num_chains[mw_ch],chain_mw[mw_ch],round(frac_anions[fr_an],2),\
+                        unpoly_frac,casenum))
+
                 if not os.path.isdir(workdir_main):
                     print( workdir_main, "not found")
                     continue
@@ -222,20 +225,25 @@ for mw_ch in range(len(chain_mw)):
                 os.chdir(workdir_main)
                 destdir = os.getcwd()
 
+                print('Current working directory: ' + destdir)
+
+                #----Check for previous restart files------------
                 archfiles = destdir + '/archival*'
                 list_of_files = glob.glob(archfiles)
 
-                #----Generate pair coefficient list----
+                if not list_of_files:
+                    print("No archival files found in ", destdir)
+                    continue
+
+                #----Generate pair coefficient list--------------
                 if gen_pair_lst:
                     gen_pair_coeff_file(destdir,ntypes,name_list,eps_list,sig_list,\
                                         ljcut_list,coulcut_list)
                 if gen_bond_lst:
                     gen_bond_coeff_file(destdir,bname_list,kspr_list,sig_list,bcon_list)
 
-                if not list_of_files:
-                    print("No archival files found in ", destdir)
-                    continue
 
+                #----Copy other required files-------------------
                 for fyllist in range(len(lmp_long)):
                     cpy_main_files(src_lmp,destdir,lmp_long[fyllist])
 
