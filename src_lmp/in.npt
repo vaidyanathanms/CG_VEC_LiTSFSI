@@ -58,7 +58,7 @@ dump            main all custom 2500 config_${ts}.lammpstrj id type xu yu zu
 #####################################################
 
 # Main Fixes - NPT
-fix 1 all npt temp 1.0 1.0 0.5 iso 9.75 9.75 5.0 #Pressure needs to be checked
+fix 1 all npt temp 1.0 1.0 0.5 iso 3.65 3.65 5.0 #Pressure needs to be checked
 
 # Run Styles
 run_style verlet
