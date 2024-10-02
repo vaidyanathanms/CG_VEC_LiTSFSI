@@ -722,7 +722,6 @@ SUBROUTINE COMPUTE_RDF(iframe)
            a2id   = aidvals(j,1)        
            a2type = aidvals(j,3)
 
-
            IF(a1type == a1ref .AND. a2type == a2ref) THEN        
 
               ! Account for neglecting same atoms in g_AA(r) 
