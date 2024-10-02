@@ -1,0 +1,25 @@
+datafile
+restart_5m.data
+trajectory_file
+config_6000000.lammpstrj
+nframes
+10
+skipfr
+0
+freqfr
+0
+nchains
+150
+poly_types
+3
+1 2 3
+compute_rg
+1 1 1
+iondiff
+6
+cntriondiff
+3
+compute_rdf
+20 100 10 2
+3 6
+2 6
