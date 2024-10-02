@@ -55,6 +55,7 @@ variable        ts equal step
 thermo_style	custom step temp press pe evdwl ecoul epair ebond eangle
 thermo          10000
 dump            main all custom 10000 config_${ts}.lammpstrj id type xu yu zu
+velocity        all create 1 1231 mom yes  #reset momentum to account for errors from langevin
 
 #####################################################
 # Equilibration (NVT dynamics at kT=1)
@@ -68,7 +69,7 @@ run_style verlet
 restart   5000 restart1 restart2
 restart   500000 archival_*.restart
 timestep  0.01
-run	  6110000 upto
+run	  15110000 upto
 unfix 1
 write_restart 	restart_NVT.dat
 
