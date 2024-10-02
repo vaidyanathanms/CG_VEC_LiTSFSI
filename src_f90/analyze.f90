@@ -646,7 +646,11 @@ SUBROUTINE STRUCT_INIT()
            
         END DO
 
-        pairs_rdf(i,3) = t1*t2
+        IF(pairs_rdf(i,1) == pairs_rdf(i,2)) THEN
+           pairs_rdf(i,3) = t1*(t1-1) !g_AA(r)
+        ELSE
+           pairs_rdf(i,3) = t1*t2 !g_AB(r)
+        END IF
 
      END DO
 
@@ -718,7 +722,15 @@ SUBROUTINE COMPUTE_RDF(iframe)
            a2id   = aidvals(j,1)        
            a2type = aidvals(j,3)
 
+
            IF(a1type == a1ref .AND. a2type == a2ref) THEN        
+
+              ! Account for neglecting same atoms in g_AA(r) 
+              IF(a1type == a2type .AND. a1id == a2id) THEN
+
+                 CONTINUE
+
+              END IF
 
               rxval = rxyz_lmp(a1id,1) - rxyz_lmp(a2id,1) 
               ryval = rxyz_lmp(a1id,2) - rxyz_lmp(a2id,2) 
@@ -726,7 +738,7 @@ SUBROUTINE COMPUTE_RDF(iframe)
               
               rxval = rxval - box_xl*ANINT(rxval/box_xl)
               ryval = ryval - box_yl*ANINT(ryval/box_yl)
-              rzval = rzval ! No periodicity
+              rzval = rzval - box_yl*ANINT(rzval/box_zl)
               
               rval = sqrt(rxval**2 + ryval**2 + rzval**2)
               ibin = FLOOR(rval/rbinval)
@@ -737,8 +749,6 @@ SUBROUTINE COMPUTE_RDF(iframe)
                       &,paircnt) + 1
               
               END IF
-              
-           END IF
            
         END DO
 
@@ -753,7 +763,7 @@ SUBROUTINE COMPUTE_RDF(iframe)
      DO i = 0,rmaxbin-1
 
         rdfarray(i,j) = rdfarray(i,j) + REAL(dumrdfarray(i,j))&
-             &*rvolval/(REAL(2.0*pairs_rdf(j,3)))
+             &*rvolval/(REAL(pairs_rdf(j,3)))
         
      END DO
      
