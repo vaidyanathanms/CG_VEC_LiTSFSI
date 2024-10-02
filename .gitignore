@@ -1,0 +1,9 @@
+.*~
+src_f90/*~
+src_f90/*.mod
+src_f90/*.o
+src_f90/dyn*
+src_f90/basic_dynamicsv3.f90
+src_lmp/*~
+src_f90/charge.txt
+
