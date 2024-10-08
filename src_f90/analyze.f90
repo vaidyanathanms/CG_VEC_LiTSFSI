@@ -208,49 +208,49 @@ SUBROUTINE READ_DATAFILE()
   
   IF(ierr .NE. 0) STOP "Data file not found"
 
-  WRITE(logout,*) "Datafile used is :", trim(adjustl(data_fname))
+  WRITE(logout,*) "Datafile used: ", trim(adjustl(data_fname))
 
   ntotatoms = 0;ntotbonds=0;ntotangls=0;ntotdihds=0;ntotimprs=0
   atomflag =0;velflag = 0;bondflag=0;anglflag=0;dihdflag=0;imprflag=0
 
   READ(inpread,*)
-  READ(inpread,*)
+  READ(inpread,*) 
 
   DO i = 1,imax-2 !Change here according to convenience
-       
+      
      READ(inpread,*) u, dumchar
      
-        IF(dumchar == "atoms") THEN
-           ntotatoms = u
-        ELSEIF(dumchar == "bonds") THEN
-           ntotbonds = u
-        ELSEIF(dumchar == "angles") THEN
-           ntotangls = u
-        ELSEIF(dumchar == "dihedrals") THEN
-           ntotdihds = u
-        ELSEIF(dumchar == "atom" .OR. dumchar == "atomtypes") THEN
-           ntotatomtypes = u
-        ELSEIF(dumchar == "bond" .OR. dumchar == "bondtypes") THEN
-           ntotbondtypes = u
-        ELSEIF(dumchar == "angle" .OR. dumchar == "atomtypes") THEN
-           ntotangltypes = u
-        ELSEIF(dumchar == "dihedral" .OR. dumchar == "dihedraltypes") THEN
-           ntotdihdtypes = u
-        ELSEIF(dumchar == "improper" .OR. dumchar == "impropertypes") THEN
-           ntotimprtypes = u
-        ELSEIF(dumchar == "Masses") THEN
+     IF(dumchar == "atoms") THEN
+        ntotatoms = u
+     ELSEIF(dumchar == "bonds") THEN
+        ntotbonds = u
+     ELSEIF(dumchar == "angles") THEN
+        ntotangls = u
+     ELSEIF(dumchar == "dihedrals") THEN
+        ntotdihds = u
+     ELSEIF(dumchar == "atom" .OR. dumchar == "atomtypes") THEN
+        ntotatomtypes = u
+     ELSEIF(dumchar == "bond" .OR. dumchar == "bondtypes") THEN
+        ntotbondtypes = u
+     ELSEIF(dumchar == "angle" .OR. dumchar == "atomtypes") THEN
+        ntotangltypes = u
+     ELSEIF(dumchar == "dihedral" .OR. dumchar == "dihedraltypes") THEN
+        ntotdihdtypes = u
+     ELSEIF(dumchar == "improper" .OR. dumchar == "impropertypes") THEN
+        ntotimprtypes = u
+     ELSEIF(dumchar == "Masses") THEN
            
-           ALLOCATE(masses(ntotatomtypes,1),stat = AllocateStatus)
-           IF(AllocateStatus/=0) STOP "did not allocate masses"
+        ALLOCATE(masses(ntotatomtypes,1),stat = AllocateStatus)
+        IF(AllocateStatus/=0) STOP "did not allocate masses"
            
-           DO j = 1,ntotatomtypes
-              
-              READ(inpread,*) u, masses(u,1)
-              
-           END DO
+        DO j = 1,ntotatomtypes
            
-        END IF
+           READ(inpread,*) u, masses(u,1)
+           
+        END DO
         
+     END IF
+     
   END DO
 
   READ(inpread,*)
@@ -471,7 +471,7 @@ SUBROUTINE ANALYZE_TRAJECTORYFILE()
   IF(ierr /= 0) STOP "trajectory file not found"
 
   PRINT *, "Trajectory file used: ",trim(adjustl(traj_fname))
-  WRITE(logout,*) "Trajectory file used is :"&
+  WRITE(logout,*) "Trajectory file used: "&
        &,trim(adjustl(traj_fname))
 
   
