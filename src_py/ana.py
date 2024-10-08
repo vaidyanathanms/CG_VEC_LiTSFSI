@@ -17,14 +17,14 @@ from my_python_functions import edit_generate_anainp_files
 from my_python_functions import run_analysis
 
 #---------input details----------------------------------------
-analyze_only_latest = 1 # Only analyze the latest trajectory file
+analyze_only_latest = 0 # Only analyze the latest trajectory file
 frac_anions  = [1/10]#,1/15,1/10]#,1/20,1/10,1/6,1/5,1/3] # fraction of anions
 tot_mons     = 6000 # total number of MONOMERS in the poly CHAIN
 chain_mw     = [40]#60,40]#,60,90] # of monomer range per chain
 num_chains   = [int(tot_mons/x) for x in chain_mw] # of polymerized ch
 unpoly_farr  = [0.6] # fraction of unpolymerized mons
 nrepeats     = 1 # number of replica
-nframes      = 200 # total frames to be analyzed
+nframes      = 50 # total frames to be analyzed
 skipfr       = 0 # skip frames
 freqfr       = 5 # freq of anaylsis
 
@@ -148,7 +148,7 @@ for mw_ch in range(len(chain_mw)):
                                                     num_chains[mw_ch],nframes,skipfr,\
                                                     freqfr,fyllist+1)
                 jobana = 'jobana_' + str(fyllist+1) + '.sh'
-                jobstr = 'ana_' + str(frac_anions[fr_an]) + '_' + \
-                         chain_mw[mw_ch]
+                jobstr = 'ana_' + str(chain_mw[mw_ch]) + '_' + \
+                         str("{:.2f}".format(frac_anions[fr_an]))
                 run_analysis(anainp, jobstr, num_chains[mw_ch],fyllist+1,\
-                             'jobana_var.sh',jobana,tottime,nnodes,ncores)                
+                             'jobana_var.sh',jobana,tottime,nnodes,ncores)
