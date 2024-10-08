@@ -24,5 +24,7 @@ mv rgavg_pyconfig allresults
 mv rgall_pyconfig allresults
 mv rdf_pyconfig allresults
 mv log.pyconfig allresults
+mv anainp_pycase.txt allresults
+mv jobana_pycase.sh allresults
 
 echo "Analysis completed ..."
