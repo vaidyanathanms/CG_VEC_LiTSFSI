@@ -658,6 +658,8 @@ SUBROUTINE STRUCT_INIT()
 
   END IF
 
+
+
 END SUBROUTINE STRUCT_INIT
 
 !--------------------------------------------------------------------
@@ -724,24 +726,30 @@ SUBROUTINE COMPUTE_RDF(iframe)
            a2id   = aidvals(j,1)        
            a2type = aidvals(j,3)
 
-           IF(a1type == a2type .AND. a1id == a2id) CONTINUE
+           ! Remove identical IDs when computing g_AA(r)
+           IF(a1id == a2id .AND. a1ref == a2ref) CYCLE
 
-           rxval = rxyz_lmp(a1id,1) - rxyz_lmp(a2id,1) 
-           ryval = rxyz_lmp(a1id,2) - rxyz_lmp(a2id,2) 
-           rzval = rxyz_lmp(a1id,3) - rxyz_lmp(a2id,3) 
+
+           IF(a1type == a1ref .AND. a2type == a2ref) THEN
+
+              rxval = rxyz_lmp(a1id,1) - rxyz_lmp(a2id,1) 
+              ryval = rxyz_lmp(a1id,2) - rxyz_lmp(a2id,2) 
+              rzval = rxyz_lmp(a1id,3) - rxyz_lmp(a2id,3) 
               
-           rxval = rxval - box_xl*ANINT(rxval/box_xl)
-           ryval = ryval - box_yl*ANINT(ryval/box_yl)
-           rzval = rzval - box_yl*ANINT(rzval/box_zl)
+              rxval = rxval - box_xl*ANINT(rxval/box_xl)
+              ryval = ryval - box_yl*ANINT(ryval/box_yl)
+              rzval = rzval - box_yl*ANINT(rzval/box_zl)
            
-           rval = sqrt(rxval**2 + ryval**2 + rzval**2)
-           ibin = FLOOR(rval/rbinval)
+              rval = sqrt(rxval**2 + ryval**2 + rzval**2)
+              ibin = FLOOR(rval/rbinval)
            
-           IF(ibin .LT. rmaxbin) THEN
+              IF(ibin .LT. rmaxbin) THEN
+                 
+                 dumrdfarray(ibin,paircnt) = dumrdfarray(ibin&
+                      &,paircnt) + 1
               
-              dumrdfarray(ibin,paircnt) = dumrdfarray(ibin&
-                   &,paircnt) + 1
-              
+              END IF
+
            END IF
            
         END DO
