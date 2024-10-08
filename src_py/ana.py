@@ -12,12 +12,12 @@ from subprocess import call
 from my_python_functions import cpy_main_files
 from my_python_functions import compile_anafiles
 from my_python_functions import find_datafyle
-from my_python_functions import find_latest_trajfyle
+from my_python_functions import find_trajfiles
 from my_python_functions import edit_generate_anainp_files
 from my_python_functions import run_analysis
 
 #---------input details----------------------------------------
-analyze_only_latest = 1 # Only analyze the latest trajectory file
+analyze_only = 'config_6000000.lammpstrj' #latest, filename, null
 frac_anions  = [1/20]#,1/15,1/10]#,1/20,1/10,1/6,1/5,1/3] # fraction of anions
 tot_mons     = 6000 # total number of MONOMERS in the poly CHAIN
 chain_mw     = [40]#60,40]#,60,90] # of monomer range per chain
@@ -129,28 +129,28 @@ for mw_ch in range(len(chain_mw)):
             print( "Copy Successful - Generating Input Files")
             tot_chains = num_chains[mw_ch]
             
-            dataname = find_datafyle(data_pref,chain_mw[mw_ch],frac_anions[fr_an],\
-                                     lmpexe_dir,lmp_exe,data_ext)
+            dataname = find_datafyle(data_pref,chain_mw[mw_ch],\
+                                     frac_anions[fr_an],lmpexe_dir,\
+                                     lmp_exe,data_ext)
+
             if dataname == 'ERROR':
                 print("ERROR: No restart files found"); continue
 
+            print( "Compiling analysis codes ..."
             compile_anafiles()            
 
             #----Retrieve trajectory files
-            if analyze_only_latest:
-                traj_arr = [max(glob.glob(traj_pref),key=os.path.getctime)]
-            else:
-                traj_arr = glob.glob(traj_pref)
+            print(" Finding trajectory files...")
+            traj_arr = find_trajfiles(analyze_only)
             if traj_arr == []:
-                print("ERROR: No trajectory files found")
-                continue
+                print("ERROR: No trajectory files found"); continue
 
             #----Iterate through trajectory files and submit-----            
             for fyllist in range(len(traj_arr)):
                 print("Analyzing ", traj_arr[fyllist])
                 anainp = edit_generate_anainp_files(dataname,traj_arr[fyllist],\
-                                                    num_chains[mw_ch],nframes,skipfr,\
-                                                    freqfr,fyllist+1)
+                                                    num_chains[mw_ch],nframes,\
+                                                    skipfr,freqfr,fyllist+1)
                 jobana = 'jobana_' + str(fyllist+1) + '.sh'
                 jobstr = 'ana_' + str(chain_mw[mw_ch]) + '_' + \
                          str("{:.2f}".format(frac_anions[fr_an]))

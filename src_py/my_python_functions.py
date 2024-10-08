@@ -266,6 +266,19 @@ def find_datafyle(data_pref,chainmw,fr_an,lmpexe_dir,lmp_exe,ext='.data'):
     return datafyle
 
 
+def find_trajfiles(analyze_only = 'null'):
+
+    if analyze_only.lower() != 'null':
+        if analyze_only.lower() == 'latest':
+            traj_arr = [max(glob.glob(traj_pref),key=os.path.getctime)]
+        else:
+            traj_arr = [analyze_only]
+    else:
+        traj_arr = glob.glob(traj_pref)
+
+    return traj_arr
+        
+
 def find_latest_trajfyle(pref,destdir):
     
     os.chdir(destdir)
