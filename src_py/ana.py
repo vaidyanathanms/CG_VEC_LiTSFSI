@@ -17,6 +17,7 @@ from my_python_functions import edit_generate_anainp_files
 from my_python_functions import run_analysis
 
 #---------input details----------------------------------------
+analyze_only_latest = 1 # Only analyze the latest trajectory file
 frac_anions  = [1/10]#,1/15,1/10]#,1/20,1/10,1/6,1/5,1/3] # fraction of anions
 tot_mons     = 6000 # total number of MONOMERS in the poly CHAIN
 chain_mw     = [40]#60,40]#,60,90] # of monomer range per chain
@@ -26,6 +27,7 @@ nrepeats     = 1 # number of replica
 nframes      = 200 # total frames to be analyzed
 skipfr       = 0 # skip frames
 freqfr       = 5 # freq of anaylsis
+
 
 #---------job details------------------------------------------
 tottime   = 3 # in hours
@@ -128,7 +130,11 @@ for mw_ch in range(len(chain_mw)):
             if dataname == 'ERROR':
                 print("ERROR: No restart files found"); continue
 
-            traj_arr = glob.glob(traj_pref)
+            #----Retrieve trajectory files
+            if analyze_only_latest:
+                traj_arr = glob.glob(traj_pref,key=os.path.getctime)
+            else:
+                traj_arr = glob.glob(traj_pref)
             if traj_arr == []:
                 print("ERROR: No trajectory files found")
                 continue
@@ -142,5 +148,7 @@ for mw_ch in range(len(chain_mw)):
                                                     num_chains[mw_ch],nframes,skipfr,\
                                                     freqfr,fyllist+1)
                 jobana = 'jobana_' + str(fyllist+1) + '.sh'
-                run_analysis(anainp, num_chains[mw_ch],casenum,\
-                             'jobana_var.sh',jobana,tottime,nnodes, ncores)                
+                jobstr = 'ana_' + str(frac_anions[fr_an]) + '_' + \
+                         chain_mw[mw_ch]
+                run_analysis(anainp, jobstr, num_chains[mw_ch],fyllist+1,\
+                             'jobana_var.sh',jobana,tottime,nnodes,ncores)                
