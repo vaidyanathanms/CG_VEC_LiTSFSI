@@ -8,14 +8,16 @@ PROGRAM PEMAIN
   USE ANALYZE_PARAMS
   IMPLICIT NONE
 
+! Print headers
+
   PRINT *, "Static analysis of CG_VEC_MTFSI system .."
   PRINT *, "Starting OMP Threads .."
-
 !$OMP PARALLEL
   nproc = OMP_GET_NUM_THREADS()
-  PRINT *, "Number of threads are: ", nproc
 !$OMP END PARALLEL
+  PRINT *, "Number of threads: ", nproc
 
+! Call functions
   CALL READ_ANA_IP_FILE()
   CALL READ_DATAFILE()
   CALL SORTALLARRAYS()
@@ -24,7 +26,7 @@ PROGRAM PEMAIN
   CALL ALLOUTPUTS()
   CALL DEALLOCATE_ARRAYS()
   
-
+! Print completion
   PRINT *, "All Calculations Completed Succesfully :)"
 
 END PROGRAM PEMAIN
