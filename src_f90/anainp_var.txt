@@ -3,13 +3,13 @@ py_datafyl
 trajectory_file
 py_trajfyl
 nframes
-900
+py_nframes
 skipfr
-0
+py_skipfr
 freqfr
-0
+py_freqfr
 nchains
-100
+py_ntotchains
 poly_types
 3
 1 2 3
