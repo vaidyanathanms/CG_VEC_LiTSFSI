@@ -15,6 +15,6 @@ echo $PWD
 
 export OMP_NUM_THREADS=py_ncores
 
-mkdir -p anaoutdir
-
 ./ana.o py_anainp
+wait
+echo "Analysis completed ..."
