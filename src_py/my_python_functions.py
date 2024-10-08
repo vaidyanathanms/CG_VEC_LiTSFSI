@@ -302,13 +302,13 @@ def edit_generate_anainp_files(inpdata,inptraj,nch_tot,nframes=100,\
 
     return outana
 
-def run_analysis(anainp,jobstrhead,ntotch,casenum,inpjob,outjob,ttime=3,\
-                 nnodes = 1,ncores=36):
+def run_analysis(anainp,jobstrhead,ntotch,casenum,inpjob,outjob,\
+                 trajname,ttime=3,nnodes = 1,ncores=36):
 
     if not os.path.exists(inpjob):
         print('ERROR: ', inpjob,'not found')
         return
-    
+
     fr  = open(inpjob,'r')
     fw  = open(outjob,'w')
 
@@ -317,7 +317,8 @@ def run_analysis(anainp,jobstrhead,ntotch,casenum,inpjob,outjob,ttime=3,\
           replace("py_anainp",str(anainp)).\
           replace("py_tottime",str(ttime)).\
           replace("py_nnodes",str(nnodes)).\
-          replace("py_ncores",str(ncores))
+          replace("py_ncores",str(ncores)).\
+          replace("pyconfig",trajname)
     fw.write(fid)
 
     fw.close()
