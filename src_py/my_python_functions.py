@@ -223,27 +223,24 @@ def clean_backup_initfiles(f90_files,tcl_files,lmpinp1,lmpinp2,destdir):
         os.remove(fyl)
 
 
-def compile_anafiles(f90_comp):
+def compile_anafiles(f90_comp='ifort'):
 
-    if not os.path.exists('pe_params.f90'):
-        print('ERROR: pe_params.f90 not found')
+    if not os.path.exists('ana_params.f90'):
+        print('ERROR: ana_params.f90 not found')
         return
 
-    if not os.path.exists('pe_analyze.f90'):
-        print('ERROR: pe_analyze.f90 not found')
+    if not os.path.exists('analyze.f90'):
+        print('ERROR: analyze.f90 not found')
         return
 
 
-    subprocess.call([f90_comp,'-r8','-qopenmp','-mkl',\
-                     '-check','-traceback','pe_params.f90',\
-                     'pe_analyze.f90','-o','anainp.o'])
+    subprocess.call([f90_comp,'-r8','-qopenmp','-check','-traceback',\
+                     'ana_params.f90','analyze.f90','-o','ana.o'])
 
-def find_datafyle(nch_free,archstr,casenum,destdir):
+def find_datafyle(data_pref,chainmw,fr_an,lmpexe_dir,lmp_exe,ext='.data'):
 
-    os.chdir(destdir)
-    curr_dir = os.getcwd()
-    datafyle = "PEdata_"+str(nch_free)+"_" +archstr+ \
-               "_"+str(casenum)+".dat"
+    datafyle = data_pref+str(chainmw)+"_"+str("{:.2f}".format(fr_an))\
+               + ext
 
     if not os.path.exists(datafyle):
         print ("Data file not found ..")
@@ -253,14 +250,19 @@ def find_datafyle(nch_free,archstr,casenum,destdir):
         if restart_fyles == []:
             return 'ERROR'
 
-        if not os.path.exists('lmp_mesabi'):
+        if not os.path.exists(lmp_exe):
         
-            src_lmp = '/home/dorfmank/vsethura/mylammps/src/lmp_mesabi'
-            destfyle = curr_dir + '/lmp_mesabi'
+            src_lmp = lmpexe_dir + '/' + lmp_exe
+            destfyle = os.getcwd() + '/' + lmp_exe
             shutil.copy2(src_lmp,destfyle)
 
-        subprocess.call(['mpirun','-np','48','./lmp_mesabi','-r',restart_fyles[0],datafyle])
+        subprocess.call(['mpirun','-np','72',lmp_exe,'-r',\
+                         restart_fyles[0],datafyle])
         
+    else:
+
+        print("Datafile used.. " + datafyle)
+
     return datafyle
 
 
@@ -274,8 +276,8 @@ def find_latest_trajfyle(pref,destdir):
     return latest_fyle
 
 
-def edit_generate_anainp_files(inpdata,inptraj,nch_tot,nch_free,\
-                               nch_graft,cutoff,listnum):
+def edit_generate_anainp_files(inpdata,inptraj,nch_tot,nframes=100,\
+                               skip_fr=0,freq_fr=1,listnum=0):
     
     if not os.path.exists('anainp_var.txt'):
         print('ERROR: pe_params not found')
@@ -285,44 +287,43 @@ def edit_generate_anainp_files(inpdata,inptraj,nch_tot,nch_free,\
     outana = 'anainp_' + str(listnum) + '.txt'
     fw  = open(outana,'w')
 
-    datafyle = re.split('/',inpdata)
-    dataname = datafyle[len(datafyle)-1]
+    datafyle = os.path.basename(inpdata)
+    trajfyle = os.path.basename(inptraj)
 
-    trajfyle = re.split('/',inptraj)
-    trajname = trajfyle[len(trajfyle)-1]
-    
-
-    fid = fr.read().replace("py_datafyl",dataname).\
-          replace("py_trajfyl",trajname).\
-          replace("py_ntotchains",str(nch_tot)).\
-          replace("py_nfrchains", str(nch_free)).\
-          replace("py_ngrchains",str(nch_graft)).\
-          replace("py_cutoff",str(cutoff))
+    fid = fr.read().replace("py_datafyl",inpdata).\
+          replace("py_trajfyl",inptraj).\
+          replace("py_nframes",str(nframes)).\
+          replace("py_skipfr",str(skip_fr)).\
+          replace("py_freqfr",str(freq_fr)).\
+          replace("py_ntotchains",str(nch_tot))
     fw.write(fid)
     fw.close()
     fr.close()
 
-def run_analysis(nch_free,pdifree,casenum,dirstr,inpjob,outjob,listnum,destdir):
+    return outana
+
+def run_analysis(anainp,ntotch,casenum,inpjob,outjob,ttime=3,\
+                 nnodes = 1,ncores=36):
 
     if not os.path.exists(inpjob):
         print('ERROR: ', inpjob,'not found')
         return
     
-    jobstr = "ana_" + str(nch_free) + "_" + str(pdifree) + "_" \
-             + str(casenum) + "_" + dirstr
     fr  = open(inpjob,'r')
     fw  = open(outjob,'w')
+
+    jobstr = "ana_" + str(ntotch) + "_" + str(casenum)
     fid = fr.read().replace("py_jobname",jobstr).\
-          replace("py_freech",str(nch_free)).\
-          replace("py_pdifree",str(pdifree)).\
-          replace("py_caselen",str(casenum)).\
-          replace("pyfylval",str(listnum)).\
-          replace("pyoutdir",str(destdir))
+          replace("py_anainp",str(anainp)).\
+          replace("py_tottime",str(ttime)).\
+          replace("py_nnodes",str(nnodes)).\
+          replace("py_ncores",str(ncores))
     fw.write(fid)
+
     fw.close()
     fr.close()
 
-    subprocess.call(["qsub", outjob])
+#    subprocess.call(["sbatch", outjob])
 
 
 def find_recent_file(destdir,keyword): #A replica of find_recent_traj_file

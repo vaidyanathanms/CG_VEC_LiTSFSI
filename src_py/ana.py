@@ -16,148 +16,131 @@ from my_python_functions import find_latest_trajfyle
 from my_python_functions import edit_generate_anainp_files
 from my_python_functions import run_analysis
 
-#---------input flags------------------------------------------
-analysis_type = 2 #1-polydisp_pe,2-newparams,3-mwchange,#4-oldsize
-
 #---------input details----------------------------------------
-free_chains  = [150]
-free_avg_mw  = 30
-graft_chains = 32
-graft_avg_mw = 35 
-tail_mons    = 5
-nsalt        = 510
-f_charge     = 0.5
-archarr      = [3]
-ncases_pdi   = [3]
-pdi_free     = 1.0
-pdi_graft    = 1.0
-cutoff_dist  = 1.50 #use two decimal places
+frac_anions  = [1/10]#,1/15,1/10]#,1/20,1/10,1/6,1/5,1/3] # fraction of anions
+tot_mons     = 6000 # total number of MONOMERS in the poly CHAIN
+chain_mw     = [40]#60,40]#,60,90] # of monomer range per chain
+num_chains   = [int(tot_mons/x) for x in chain_mw] # of polymerized ch
+unpoly_farr  = [0.6] # fraction of unpolymerized mons
+nrepeats     = 1 # number of replica
+nframes      = 1000 # total frames to be analyzed
+skipfr       = 0 # skip frames
+freqfr       = 5 # freq of anaylsis
+
+#---------job details------------------------------------------
+tottime   = 3 # in hours
+nnodes    = 1 # number of nodes
+ncores    = 36 # number of cores
+hpc_sys   = 'cades'  # Opt: kestrel, cades
 
 #--------file_lists--------------------------------------------
-
-ana_files = ['pe_analyze.f90','pe_params.f90','anainp_var.txt']
+ana_files = ['analyze.f90','ana_params.f90','anainp_var.txt']
 job_files = ['jobana_var.sh']
 traj_pref = 'config_*'
+data_pref = 'topo_VECdata_'; data_ext = '.dat'
 
 #---------directory info---------------------------------------
-maindir = os.getcwd()
-scratchdir = '/scratch.global/vaidya/'
-jobdir = '/home/dorfmank/vsethura/allfiles/files_polydisperse/src_lmp'
-   
-#Main analysis
-for ifree in range(len(free_chains)):
-    
-    print( "Free Number of Chains: ", free_chains[ifree])
+maindir = os.getcwd() #src_py dir
+if hpc_sys == 'kestrel':
+    home_path = '/home/vaidyams'
+    scr_path  = '/scratch/vaidyams'
+elif hpc_sys == 'cades':
+    home_path = '/home/vm5'
+    scr_path  = '/lustre/or-scratch/cades-birthright/vm5'
+else:
+    raise RuntimeError('Unknown HPC system ' + hpc_sys)
 
-    if analysis_type == 1:
-        workdir1 = scratchdir + 'polydisp_pe'
-    elif analysis_type == 2:
-        workdir1 = scratchdir + 'newparams_polydisp_pe'
-    elif analysis_type == 3:
-        workdir1 = scratchdir + 'mwchange_polydisp_pe'
-    elif analysis_type == 4:
-        workdir1 = scratchdir + 'oldsize_polydisp_pe'
-    else:
-        print ("ERROR: Analysis_type unknown")
-        continue
+src_f90    = home_path + '/all_codes/files_CG-SIC/src_f90' #src_f90 dir
+src_lmp    = home_path + '/all_codes/files_CG-SIC/src_lmp' #src_lmp dir
+scratchdir = scr_path  + '/cg_sic' #output headdir
+scr_head   = 'sic_mixedvec_listsfi' # head dir scratch'
+
+#--------lammps executable-------------------------------------
+if hpc_sys == 'kestrel':
+    lmpexe_dir = 'None' # Using kestrel compiled lammps
+    lmp_exe    = 'lmp' # lmp executable file
+    f90_comp   = 'ifx' # FORTRAN compiler
+elif hpc_sys == 'cades':
+    lmpexe_dir = home_path + '/mylammps/src' #lmp executable path
+    lmp_exe    = 'lmp_mpi' # lmp executable file
+    f90_comp   = 'ifort' # FORTRAN compiler
+else:
+    raise RuntimeError('Unknown HPC system ' + hpc_sys)
+
+if not os.path.isdir(scratchdir):
+    raise RuntimeError(scratchdir + " not found!")
+
+#---------main analysis---------------------------------------
+for mw_ch in range(len(chain_mw)):
+    
+    print( "Analyzing MW/number of Chains: ", chain_mw[mw_ch],\
+           num_chains[mw_ch])
+    workdir1 = scratchdir + '/' + scr_head
     
     if not os.path.isdir(workdir1):
-        print("ERROR: ", workdir1, " not found")
-        continue
+        print("ERROR: " + workdir1 + " not found!"); continue
 
-    workdir2 = workdir1 + '/n_' + str(free_chains[ifree])
+    workdir2 = workdir1 + '/MW_' + str(chain_mw[mw_ch])
 	
     if not os.path.isdir(workdir2):
-        print("ERROR: ", workdir2, " not found")
-        continue
+        print("ERROR: " + workdir2 + " not found!"); continue
         
-    for iarch in range(len(archarr)):
+    for fr_an in range(len(frac_anions)):
              
-        if archarr[iarch] == 1:
-            print( "Archval: Block_Block")
-            dirstr = 'bl_bl'
-            fylstr = 'block_block'
-        elif archarr[iarch] == 2:
-            print( "Archval: Block_Alter")
-            dirstr = 'bl_al'
-            fylstr = 'block_alter'
-        elif archarr[iarch] == 3:
-            print( "Archval: Alter_Block")
-            dirstr = 'al_bl'
-            fylstr = 'alter_block'
-        elif archarr[iarch] == 4:
-            print( "Archval: Alter_Alter")
-            dirstr = 'al_al'
-            fylstr = 'alter_alter'
+        workdir_super = workdir2 + '/fanion_' + str(round(frac_anions[fr_an],2))
+
+        if not os.path.isdir(workdir_super):
+            print("ERROR: " + workdir_super + " not found!"); continue
+
+        if len(unpoly_farr) == 1:
+            unpoly_frac = unpoly_farr[0]
         else:
-            print( "Unknown Architecture")
-            
-        workdir_arch = workdir2 + '/' + dirstr
+            unpoly_frac = unpoly_farr[fr_an]
 
-        if not os.path.isdir(workdir_arch):
-            print("ERROR: ", workdir_arch, " not found")
-            continue
+        for casenum in range(1,nrepeats+1):
 
-        workdir_freepdi = workdir_arch + '/pdi_free_' + str(pdi_free)
-        if not os.path.isdir(workdir_freepdi):
-            print("ERROR: ", workdir_freepdi, " not found")
-            continue
+            workdir_main = workdir_super + '/Case_' + str(casenum)
+            if not os.path.isdir(workdir_main):
+                print("ERROR: " + workdir_main + " not found!"); continue
 
-        workdir_graftpdi = workdir_freepdi + '/pdi_graft_' + str(pdi_graft)
-        if not os.path.isdir(workdir_graftpdi):
-            print("ERROR: ", workdir_graftpdi, " not found")
-            continue
-
-        for casenum in range(len(ncases_pdi)):
-
-            workdir_subpdi = workdir_graftpdi + '/Case_' + str(ncases_pdi[casenum])
-            if not os.path.isdir(workdir_subpdi):
-                print("ERROR: ", workdir_subpdi, " not found")
-                continue
-
-            os.chdir(workdir_subpdi)
+            os.chdir(workdir_main)
             destdir = os.getcwd()
 
-            print( "Starting analysis for case ", ncases_pdi[casenum], "in ",\
-                       free_chains[ifree],dirstr)
+            print( "Analyzing case", casenum, "for f_anion/MW_chains: ",\
+                   frac_anions[fr_an],chain_mw[mw_ch])
 
             #---Copying files------
             print( "Current Dir ", destdir)
             print( "Copying Files")
                 
             for fyllist in range(len(ana_files)):
-                cpy_main_files(maindir,destdir,ana_files[fyllist])
+                cpy_main_files(src_f90,destdir,ana_files[fyllist])
 
             for fyllist in range(len(job_files)):
-                cpy_main_files(jobdir,destdir,job_files[fyllist])
+                cpy_main_files(src_lmp,destdir,job_files[fyllist])
 
-            dataname =  find_datafyle(free_chains[ifree],fylstr,\
-                                      ncases_pdi[casenum],destdir)
+            #----Generate analysis input files
+            print( "Copy Successful - Generating Input Files")
+            tot_chains = num_chains[mw_ch]
+            
+            dataname = find_datafyle(data_pref,chain_mw[mw_ch],frac_anions[fr_an],\
+                                     lmpexe_dir,lmp_exe,data_ext)
             if dataname == 'ERROR':
-                print("ERROR: No restart files found")
-                continue
+                print("ERROR: No restart files found"); continue
 
-            
-            #latest_traj = find_latest_trajfyle(traj_pref,destdir)
-            #if latest_traj == 'ERROR':
-            #    print("ERROR: No trajectory files found")
-            #    continue
-            
-            compile_anafiles()            
-            ntotch = free_chains[ifree] + graft_chains
             traj_arr = glob.glob(traj_pref)
             if traj_arr == []:
                 print("ERROR: No trajectory files found")
                 continue
-            
+
+            compile_anafiles()            
+
+            #----Iterate through trajectory files and submit-----            
             for fyllist in range(len(traj_arr)):
                 print("Analyzing ", traj_arr[fyllist])
-                edit_generate_anainp_files(dataname,traj_arr[fyllist],ntotch,\
-                                           free_chains[ifree],graft_chains,\
-                                           cutoff_dist,fyllist+1)
-                outana = 'jobana_' + str(fyllist+1) + '.sh'
-                run_analysis(free_chains[ifree],pdi_free,ncases_pdi[casenum],\
-                             fylstr,'jobana_var.sh',outana,fyllist+1,destdir)
-                
-
-
+                anainp = edit_generate_anainp_files(dataname,traj_arr[fyllist],\
+                                                    num_chains[mw_ch],nframes,skipfr,\
+                                                    freqfr,fyllist+1)
+                jobana = 'jobana_' + str(fyllist+1) + '.sh'
+                run_analysis(anainp, num_chains[mw_ch],casenum,\
+                             'jobana_var.sh',jobana,tottime,nnodes, ncores)                
