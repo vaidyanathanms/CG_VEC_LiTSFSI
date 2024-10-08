@@ -312,7 +312,7 @@ def run_analysis(anainp,jobstrhead,ntotch,casenum,inpjob,outjob,ttime=3,\
     fr  = open(inpjob,'r')
     fw  = open(outjob,'w')
 
-    jobstr = headjobstr +  "_" + str(casenum)
+    jobstr = jobstrhead +  "_" + str(casenum)
     fid = fr.read().replace("py_jobname",jobstr).\
           replace("py_anainp",str(anainp)).\
           replace("py_tottime",str(ttime)).\
