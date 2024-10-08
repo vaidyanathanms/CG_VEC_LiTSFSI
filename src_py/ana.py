@@ -17,8 +17,8 @@ from my_python_functions import edit_generate_anainp_files
 from my_python_functions import run_analysis
 
 #---------input details----------------------------------------
-analyze_only_latest = 0 # Only analyze the latest trajectory file
-frac_anions  = [1/10]#,1/15,1/10]#,1/20,1/10,1/6,1/5,1/3] # fraction of anions
+analyze_only_latest = 1 # Only analyze the latest trajectory file
+frac_anions  = [1/20]#,1/15,1/10]#,1/20,1/10,1/6,1/5,1/3] # fraction of anions
 tot_mons     = 6000 # total number of MONOMERS in the poly CHAIN
 chain_mw     = [40]#60,40]#,60,90] # of monomer range per chain
 num_chains   = [int(tot_mons/x) for x in chain_mw] # of polymerized ch
@@ -125,7 +125,7 @@ for mw_ch in range(len(chain_mw)):
             for fyllist in range(len(job_files)):
                 cpy_main_files(src_lmp,destdir,job_files[fyllist])
 
-            #----Generate analysis input files
+            #----Generate and compile analysis files
             print( "Copy Successful - Generating Input Files")
             tot_chains = num_chains[mw_ch]
             
@@ -134,16 +134,16 @@ for mw_ch in range(len(chain_mw)):
             if dataname == 'ERROR':
                 print("ERROR: No restart files found"); continue
 
+            compile_anafiles()            
+
             #----Retrieve trajectory files
             if analyze_only_latest:
-                traj_arr = glob.glob(traj_pref,key=os.path.getctime)
+                traj_arr = [max(glob.glob(traj_pref),key=os.path.getctime)]
             else:
                 traj_arr = glob.glob(traj_pref)
             if traj_arr == []:
                 print("ERROR: No trajectory files found")
                 continue
-
-            compile_anafiles()            
 
             #----Iterate through trajectory files and submit-----            
             for fyllist in range(len(traj_arr)):

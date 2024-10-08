@@ -302,7 +302,7 @@ def edit_generate_anainp_files(inpdata,inptraj,nch_tot,nframes=100,\
 
     return outana
 
-def run_analysis(anainp,jobstrhead,ntotch,casenum,inpjob,outjob,\
+def run_analysis(anainp,jobstrhead,ntotch,trajID,inpjob,outjob,\
                  trajname,ttime=3,nnodes = 1,ncores=36):
 
     if not os.path.exists(inpjob):
@@ -312,13 +312,14 @@ def run_analysis(anainp,jobstrhead,ntotch,casenum,inpjob,outjob,\
     fr  = open(inpjob,'r')
     fw  = open(outjob,'w')
 
-    jobstr = jobstrhead +  "_" + str(casenum)
+    jobstr = jobstrhead +  "_" + str(trajID)
     fid = fr.read().replace("py_jobname",jobstr).\
           replace("py_anainp",str(anainp)).\
           replace("py_tottime",str(ttime)).\
           replace("py_nnodes",str(nnodes)).\
           replace("py_ncores",str(ncores)).\
-          replace("pyconfig",trajname)
+          replace("pyconfig",trajname).\
+          replace("pycase",str(trajID))
     fw.write(fid)
 
     fw.close()
