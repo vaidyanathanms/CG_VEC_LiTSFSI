@@ -23,7 +23,7 @@ chain_mw     = [40]#60,40]#,60,90] # of monomer range per chain
 num_chains   = [int(tot_mons/x) for x in chain_mw] # of polymerized ch
 unpoly_farr  = [0.6] # fraction of unpolymerized mons
 nrepeats     = 1 # number of replica
-nframes      = 1000 # total frames to be analyzed
+nframes      = 200 # total frames to be analyzed
 skipfr       = 0 # skip frames
 freqfr       = 5 # freq of anaylsis
 
@@ -37,7 +37,7 @@ hpc_sys   = 'cades'  # Opt: kestrel, cades
 ana_files = ['analyze.f90','ana_params.f90','anainp_var.txt']
 job_files = ['jobana_var.sh']
 traj_pref = 'config_*'
-data_pref = 'topo_VECdata_'; data_ext = '.dat'
+data_pref = 'VECdata_'; data_ext = '.dat'
 
 #---------directory info---------------------------------------
 maindir = os.getcwd() #src_py dir
@@ -106,8 +106,8 @@ for mw_ch in range(len(chain_mw)):
             os.chdir(workdir_main)
             destdir = os.getcwd()
 
-            print( "Analyzing case", casenum, "for f_anion/MW_chains: ",\
-                   frac_anions[fr_an],chain_mw[mw_ch])
+            print( "Analyzing case ", casenum, "for f_anion/MW_chains/nchains: ",\
+                   frac_anions[fr_an],chain_mw[mw_ch],num_chains[mw_ch])
 
             #---Copying files------
             print( "Current Dir ", destdir)
