@@ -24,9 +24,9 @@ chain_mw     = [40]#60,40]#,60,90] # of monomer range per chain
 num_chains   = [int(tot_mons/x) for x in chain_mw] # of polymerized ch
 unpoly_farr  = [0.6] # fraction of unpolymerized mons
 nrepeats     = 1 # number of replica
-nframes      = 50 # total frames to be analyzed
+nframes      = 20 # total frames to be analyzed
 skipfr       = 0 # skip frames
-freqfr       = 5 # freq of anaylsis
+freqfr       = 2 # freq of anaylsis
 
 
 #---------job details------------------------------------------
@@ -136,7 +136,7 @@ for mw_ch in range(len(chain_mw)):
             if dataname == 'ERROR':
                 print("ERROR: No restart files found"); continue
 
-            print( "Compiling analysis codes ..."
+            print( "Compiling analysis codes ...")
             compile_anafiles()            
 
             #----Retrieve trajectory files
