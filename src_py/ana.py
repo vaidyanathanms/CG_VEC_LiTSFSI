@@ -111,6 +111,10 @@ for mw_ch in range(len(chain_mw)):
             print( "Analyzing case ", casenum, "for f_anion/MW_chains/nchains: ",\
                    frac_anions[fr_an],chain_mw[mw_ch],num_chains[mw_ch])
 
+            #---Make a results director
+            if not os.path.isdir('allresults'):
+                os.mkdir('allresults')
+
             #---Copying files------
             print( "Current Dir ", destdir)
             print( "Copying Files")
@@ -151,4 +155,5 @@ for mw_ch in range(len(chain_mw)):
                 jobstr = 'ana_' + str(chain_mw[mw_ch]) + '_' + \
                          str("{:.2f}".format(frac_anions[fr_an]))
                 run_analysis(anainp, jobstr, num_chains[mw_ch],fyllist+1,\
-                             'jobana_var.sh',jobana,tottime,nnodes,ncores)
+                             'jobana_var.sh',jobana,traj_arr[fyllist],\
+                             tottime,nnodes,ncores)
