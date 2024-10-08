@@ -722,32 +722,29 @@ SUBROUTINE COMPUTE_RDF(iframe)
            a2id   = aidvals(j,1)        
            a2type = aidvals(j,3)
 
-           IF(a1type == a1ref .AND. a2type == a2ref) THEN        
+           IF(a1type == a2type .AND. a1id == a2id) THEN
 
-              ! Account for neglecting same atoms in g_AA(r) 
-              IF(a1type == a2type .AND. a1id == a2id) THEN
+              CONTINUE
 
-                 CONTINUE
+           END IF
 
-              END IF
-
-              rxval = rxyz_lmp(a1id,1) - rxyz_lmp(a2id,1) 
-              ryval = rxyz_lmp(a1id,2) - rxyz_lmp(a2id,2) 
-              rzval = rxyz_lmp(a1id,3) - rxyz_lmp(a2id,3) 
+           rxval = rxyz_lmp(a1id,1) - rxyz_lmp(a2id,1) 
+           ryval = rxyz_lmp(a1id,2) - rxyz_lmp(a2id,2) 
+           rzval = rxyz_lmp(a1id,3) - rxyz_lmp(a2id,3) 
               
-              rxval = rxval - box_xl*ANINT(rxval/box_xl)
-              ryval = ryval - box_yl*ANINT(ryval/box_yl)
-              rzval = rzval - box_yl*ANINT(rzval/box_zl)
+           rxval = rxval - box_xl*ANINT(rxval/box_xl)
+           ryval = ryval - box_yl*ANINT(ryval/box_yl)
+           rzval = rzval - box_yl*ANINT(rzval/box_zl)
+           
+           rval = sqrt(rxval**2 + ryval**2 + rzval**2)
+           ibin = FLOOR(rval/rbinval)
+           
+           IF(ibin .LT. rmaxbin) THEN
               
-              rval = sqrt(rxval**2 + ryval**2 + rzval**2)
-              ibin = FLOOR(rval/rbinval)
+              dumrdfarray(ibin,paircnt) = dumrdfarray(ibin&
+                   &,paircnt) + 1
               
-              IF(ibin .LT. rmaxbin) THEN
-              
-                 dumrdfarray(ibin,paircnt) = dumrdfarray(ibin&
-                      &,paircnt) + 1
-              
-              END IF
+           END IF
            
         END DO
 
