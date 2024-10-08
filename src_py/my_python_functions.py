@@ -323,7 +323,7 @@ def run_analysis(anainp,ntotch,casenum,inpjob,outjob,ttime=3,\
     fw.close()
     fr.close()
 
-#    subprocess.call(["sbatch", outjob])
+    subprocess.call(["sbatch", outjob])
 
 
 def find_recent_file(destdir,keyword): #A replica of find_recent_traj_file
