@@ -722,11 +722,7 @@ SUBROUTINE COMPUTE_RDF(iframe)
            a2id   = aidvals(j,1)        
            a2type = aidvals(j,3)
 
-           IF(a1type == a2type .AND. a1id == a2id) THEN
-
-              CONTINUE
-
-           END IF
+           IF(a1type == a2type .AND. a1id == a2id) CONTINUE
 
            rxval = rxyz_lmp(a1id,1) - rxyz_lmp(a2id,1) 
            ryval = rxyz_lmp(a1id,2) - rxyz_lmp(a2id,2) 
