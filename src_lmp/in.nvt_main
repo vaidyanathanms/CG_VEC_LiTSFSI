@@ -1,5 +1,5 @@
 #####################################################
-# Stage 3: Run using Nose-Hoover NVT                #
+# Stage 4: Run using Nose-Hoover NVT for analysis   #
 # Version: May-20-2024                              #
 #####################################################
 
@@ -54,8 +54,7 @@ improper_style 	none
 variable        ts equal step
 thermo_style	custom step temp press pe evdwl ecoul epair ebond eangle
 thermo          10000
-dump            main all custom 10000 config_${ts}.lammpstrj id type xu yu zu
-velocity        all create 1 1231 mom yes  #reset momentum to account for errors from langevin
+dump            main all custom 2500 config_${ts}.lammpstrj id type xu yu zu
 
 #####################################################
 # Equilibration (NVT dynamics at kT=1)
@@ -68,12 +67,9 @@ fix 1 all nvt temp 1.0 1.0 0.5
 run_style verlet
 restart   5000 restart1 restart2
 restart   500000 archival_*.restart
-timestep  0.005
-run       6000000 upto
-write_restart restart_NVT1.dat
 timestep  0.01
-run	  10000000 upto
+run	  20000000 upto
 unfix 1
-write_restart 	restart_NVT2.dat
+write_restart 	restart_NVTmain.dat
 
 

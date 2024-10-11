@@ -1,7 +1,7 @@
 #!/bin/bash
 
-#SBATCH -A birthright
-#SBATCH -p high_mem_cd
+#SBATCH -A chem
+#SBATCH -p burst
 #SBATCH --time=py_tottime:30:00
 #SBATCH --nodes=py_nnodes
 #SBATCH --ntasks-per-node=py_ncores
