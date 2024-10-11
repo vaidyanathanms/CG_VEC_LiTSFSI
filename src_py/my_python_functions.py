@@ -266,16 +266,17 @@ def find_datafyle(data_pref,chainmw,fr_an,lmpexe_dir,lmp_exe,ext='.data'):
     return datafyle
 
 
-def find_trajfiles(analyze_only = 'null'):
+def find_trajfiles(analyze_only ='latest',traj_pref='config_*',\
+                   fname='none'):
 
-    if analyze_only.lower() != 'null':
-        if analyze_only.lower() == 'latest':
-            traj_arr = [max(glob.glob(traj_pref),key=os.path.getctime)]
-        else:
-            traj_arr = [analyze_only]
-    else:
+    if analyze_only.lower() == 'latest':
+        traj_arr = [max(glob.glob(traj_pref),key=os.path.getctime)]
+    elif analyze_only.lower() == 'all':
         traj_arr = glob.glob(traj_pref)
-
+    elif analyze_only.lower() == 'filelist':
+        traj_arr = [fname]
+    else:
+        traj_arr = [analyze_only]
     return traj_arr
         
 

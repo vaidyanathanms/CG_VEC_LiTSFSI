@@ -17,17 +17,18 @@ from my_python_functions import edit_generate_anainp_files
 from my_python_functions import run_analysis
 
 #---------input details----------------------------------------
-analyze_only = 'config_6000000.lammpstrj' #latest, filename, null
-frac_anions  = [1/20]#,1/15,1/10]#,1/20,1/10,1/6,1/5,1/3] # fraction of anions
+analyze_only = 'filelist' #latest, all, filename, filelist
+analist      = ['config_13000000.lammpstrj','config_9000000.lammpstrj',\
+                'config_7000000.lammpstrj','config_6000000.lammpstrj']
+frac_anions  = [1/20,1/15,1/10,1/5]#,1/20,1/10,1/6,1/5,1/3] # fraction of anions
 tot_mons     = 6000 # total number of MONOMERS in the poly CHAIN
 chain_mw     = [40]#60,40]#,60,90] # of monomer range per chain
 num_chains   = [int(tot_mons/x) for x in chain_mw] # of polymerized ch
 unpoly_farr  = [0.6] # fraction of unpolymerized mons
 nrepeats     = 1 # number of replica
-nframes      = 20 # total frames to be analyzed
+nframes      = 50 # total frames to be analyzed
 skipfr       = 0 # skip frames
 freqfr       = 2 # freq of anaylsis
-
 
 #---------job details------------------------------------------
 tottime   = 3 # in hours
@@ -141,7 +142,15 @@ for mw_ch in range(len(chain_mw)):
 
             #----Retrieve trajectory files
             print(" Finding trajectory files...")
-            traj_arr = find_trajfiles(analyze_only)
+            if analyze_only == 'filelist':
+                if not os.path.exists(analist[fr_an]):
+                    print("ERROR: " + analist[fr_an] + " not found!")
+                    continue
+                traj_arr = find_trajfiles(analyze_only,traj_pref,\
+                                          analist[fr_an])
+            else:
+                traj_arr = find_trajfiles(analyze_only,traj_pref,\
+                                          'none')
             if traj_arr == []:
                 print("ERROR: No trajectory files found"); continue
 
