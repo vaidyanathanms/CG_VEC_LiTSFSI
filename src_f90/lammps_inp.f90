@@ -339,16 +339,12 @@ SUBROUTINE INPCOR()
 
   IMPLICIT NONE
   
-  INTEGER :: i,j,k,u,v,ierror,un_chid
+  INTEGER :: i,j,k,u,v,ierror
   INTEGER :: an_per_ch, cgcnt, poly_mon
   INTEGER :: bid_start, bondid_new, bondtemp
   REAL, PARAMETER :: r0init  = 0.97
-  REAL, PARAMETER :: r0sq3   = r0init/sqrt(3.0)
-  REAL, PARAMETER :: rmaxsq  = r0init*r0init
   REAL, PARAMETER :: math_pi = 3.14159265359
   REAL :: theta, phi
-  REAL :: rx, ry, rz,rval
-  LOGICAL :: in_box
   REAL :: csum
   LOGICAL :: arr_bound
   
@@ -356,12 +352,13 @@ SUBROUTINE INPCOR()
   
   WRITE(outfile,*) "Random Initial Configuration : NRRW"
 
-! Create polymeric chains
+  ! Create polymeric chains
 
   WRITE(outfile,*) "Generating chain configurations .. "
 
+  PRINT *, "------Generating mixed VEC-anion chains------------"
   i = 1; bondid_new = 0; bflag_arr = 0
-
+  
   ! Polymerized chains
   DO WHILE (i .LE. N_poly)
 
@@ -370,168 +367,112 @@ SUBROUTINE INPCOR()
      cgcnt = 1
      j = 1
      poly_mon = 1
-     
+
      ! First blob is VEC
-     k = (i-1)*blob_per_ch + 1     
-     theta     = math_pi*RAN1(X)
-     phi       = 2*math_pi*RAN1(X)
-     rxyz(k,1) = RAN1(X)*boxl_x
-     rxyz(k,2) = RAN1(X)*boxl_y
-     rxyz(k,3) = RAN1(X)*boxl_z
+     k      = (i-1)*blob_per_ch + 1     
+     theta  = math_pi*RAN1(X)
+     phi    = 2*math_pi*RAN1(X)
 
-     ! Create atom types here
-     aidvals(k,1) = k ! Atom ID
-     aidvals(k,2) = i ! Mol ID
-     aidvals(k,3) = 1 ! Atom type
-     charge(k)    = (0.5*(1+CG_per_mon)-REAL(cgcnt))*2*charge_poly
-     
-     DO cgcnt = 2, CG_per_mon
-
-        k = (i-1)*blob_per_ch + cgcnt
-        bondtemp     = bondtemp + 1
-        CALL CHECK_ARRAY_BOUNDS(i,k,bondtemp,arr_bound)
-        
-        theta     = math_pi*RAN1(X)
-        phi       = 2*math_pi*RAN1(X)
-        rxyz(k,1) = rxyz(k-1,1) + r0init*sin(theta)*cos(phi)
-        rxyz(k,2) = rxyz(k-1,2) + r0init*sin(theta)*sin(phi)
-        rxyz(k,3) = rxyz(k-1,3) + r0init*cos(theta)
-        aidvals(k,1) = k
-        aidvals(k,2) = i
-        aidvals(k,3) = cgcnt
-        charge(k)    = (0.5*(1+CG_per_mon)-REAL(cgcnt))*2*charge_poly 
-        CALL ASSIGN_BOND_TOPO(bondtemp,aidvals(k-1,1),aidvals(k,1)&
-             &,160)
-        
-     END DO
+     CALL CREATE_FIRST_VEC_MONOMER(i,cgcnt,theta,phi,k,bondtemp)    
 
      j = 2
      DO WHILE (j .LE. M_poly) !j runs over MONOMERS and not BLOBS
 
-        ! Second monomer onwards can be STSFI (anion)
-        IF (j .NE. M_poly .AND. RAN1(X) .LE.  an_poly_rat) THEN ! can
-           ! be attached to blob-1 only
-           
-           theta     = math_pi*RAN1(X)
-           phi       = 2*math_pi*RAN1(X)
+        IF(is_ion_sep == 0) THEN ! If anions are part of the backbone
 
-           bondtemp  = bondtemp + 1
-           ! Check if more blobs/bonds are created than the array
-           ! bounds
-           CALL CHECK_ARRAY_BOUNDS(i,k+1,bondtemp,arr_bound)
+           ! Second monomer onwards can be STSFI (anion)
+           IF (j .NE. M_poly .AND. RAN1(X) .LE.  an_poly_rat) THEN ! can
+              ! be attached to blob-1 only
 
-           ! Generate anions bonded to the backbone
-           IF (arr_bound .EQV. .TRUE.) THEN
+              theta     = math_pi*RAN1(X)
+              phi       = 2*math_pi*RAN1(X)
               
-              aidvals(k+1,1) = k + 1
-              aidvals(k+1,2) = i
-              aidvals(k+1,3) = CG_per_mon + 1
-              charge(k+1)    = -1.0
-           
-              IF(aidvals(k,3) == CG_per_mon + 1) THEN !anion-anion
-                 rxyz(k+1,1) = rxyz(k,1) + r0init*sin(theta)*cos(phi)
-                 rxyz(k+1,2) = rxyz(k,2) + r0init*sin(theta)*sin(phi)
-                 rxyz(k+1,3) = rxyz(k,3) + r0init*cos(theta)
-                 CALL ASSIGN_BOND_TOPO(bondtemp,aidvals(k+1,1)&
-                      &,aidvals(k,1),100)
+              bondtemp  = bondtemp + 1
 
-              ELSEIF(aidvals(k,3) == 1) THEN ! Wrong choice
-                 
-                 PRINT *, "WRONG CHOICE" , k
-                 STOP
-                 
-              ELSE ! poly_mon - anion bond
-                 rxyz(k+1,1) = rxyz(k+1-CG_per_mon,1) + r0init&
-                      &*sin(theta)*cos(phi)
-                 rxyz(k+1,2) = rxyz(k+1-CG_per_mon,2) + r0init&
-                      &*sin(theta)*sin(phi)
-                 rxyz(k+1,3) = rxyz(k+1-CG_per_mon,3) + r0init&
-                      &*cos(theta)
-                 CALL ASSIGN_BOND_TOPO(bondtemp,aidvals(k+1,1)&
-                      &,aidvals(k+1-CG_per_mon,1),100)
+              ! Check if more blobs/bonds are created than the array
+              ! bounds
+              CALL CHECK_ARRAY_BOUNDS(i,k+1,bondtemp,arr_bound)
 
+              IF (arr_bound .EQV. .TRUE.) THEN
+                 CALL CREATE_ANION_IN_MIXEDCHAIN(i,cgcnt,theta,phi,k&
+                      &,bondtemp,an_per_ch)
+              ELSE
+                 j = M_poly+ideal_an_per_ch
               END IF
-              
-              an_per_ch = an_per_ch + 1 ! update an_per_ch
-              k = k + 1 ! pseudo update if anion-anion bond is formed
-
+                 
            ELSE
-
-              j = M_poly+ideal_an_per_ch
-
-           END IF
               
-        ELSE
+              ! CG Blobs
+              cgcnt = 1
+              DO WHILE (cgcnt .LE. CG_per_mon)
+                           
+                 k = (i-1)*blob_per_ch + CG_per_mon*poly_mon + cgcnt +&
+                      & an_per_ch
+                 bondtemp     = bondtemp + 1
+                 ! Check if more blobs/bonds are created than the array
+                 ! bounds
+                 CALL CHECK_ARRAY_BOUNDS(i,k,bondtemp,arr_bound)
+                 
+                 IF (arr_bound .EQV. .TRUE.) THEN
            
-           !CG Blobs
+                    theta     = math_pi*RAN1(X)
+                    phi       = 2*math_pi*RAN1(X)
+                    CALL CREATE_VEC_IN_MIXEDCHAIN(i,cgcnt,theta,phi&
+                         &,k,bondtemp,an_per_ch)
+                    cgcnt = cgcnt + 1
+
+                 ELSE
+
+                    j = M_poly
+                    cgcnt = CG_per_mon+1
+
+                 END IF
+                 
+              END DO
+
+              poly_mon = poly_mon + 1
+              
+           END IF
+
+           j = j + 1
+
+        ELSE ! if anions are separate from the backbone
+
+           ! CG Blobs
            cgcnt = 1
            DO WHILE (cgcnt .LE. CG_per_mon)
-             
-              k = (i-1)*blob_per_ch + CG_per_mon*poly_mon + cgcnt +&
-                   & an_per_ch
+              
+              k = (i-1)*blob_per_ch + CG_per_mon*poly_mon + cgcnt
               bondtemp     = bondtemp + 1
               ! Check if more blobs/bonds are created than the array
               ! bounds
               CALL CHECK_ARRAY_BOUNDS(i,k,bondtemp,arr_bound)
-
+              
               IF (arr_bound .EQV. .TRUE.) THEN
-           
+                 
                  theta     = math_pi*RAN1(X)
                  phi       = 2*math_pi*RAN1(X)
-                 aidvals(k,1) = k
-                 aidvals(k,2) = i
-                 aidvals(k,3) = cgcnt
-                 charge(k)    = (0.5*(1+CG_per_mon)-REAL(cgcnt))*2*charge_poly
-
-                 IF (cgcnt == 1) THEN
-                    IF(aidvals(k-1,3) == CG_per_mon + 1) THEN !poly_mon-anion
-                       rxyz(k,1) = rxyz(k-1,1) + r0init*sin(theta)&
-                            &*cos(phi)
-                       rxyz(k,2) = rxyz(k-1,2) + r0init*sin(theta)&
-                            &*sin(phi)
-                       rxyz(k,3) = rxyz(k-1,3) + r0init*cos(theta)
-                       CALL ASSIGN_BOND_TOPO(bondtemp,aidvals(k-1,1)&
-                            &,aidvals(k,1),200)
-                    ELSE !poly_mon_(k-1) - poly_mon_k
-                       rxyz(k,1) = rxyz(k-CG_per_mon,1) + r0init&
-                            &*sin(theta)*cos(phi)
-                       rxyz(k,2) = rxyz(k-CG_per_mon,2) + r0init&
-                            &*sin(theta)*sin(phi)
-                       rxyz(k,3) = rxyz(k-CG_per_mon,3) + r0init&
-                            &*cos(theta)
-                       CALL ASSIGN_BOND_TOPO(bondtemp,aidvals(k&
-                            &-CG_per_mon,1),aidvals(k,1),200)
-                    END IF
-                 ELSE !poly_mon_k - poly_mon_k (blob-blob connection)
-                    rxyz(k,1) = rxyz(k-1,1) + r0init*sin(theta)&
-                         &*cos(phi)
-                    rxyz(k,2) = rxyz(k-1,2) + r0init*sin(theta)&
-                         &*sin(phi)
-                    rxyz(k,3) = rxyz(k-1,3) + r0init*cos(theta)
-                    CALL ASSIGN_BOND_TOPO(bondtemp,aidvals(k-1,1)&
-                         &,aidvals(k,1),200)
-                 END IF
+                 CALL CREATE_PURE_VEC_CHAINS(i,cgcnt,theta,phi,k,&
+                      &,bondtemp)
                  cgcnt = cgcnt + 1
-
+                 
               ELSE
-
+                 
                  j = M_poly
                  cgcnt = CG_per_mon+1
-
+                 
               END IF
              
            END DO
 
            poly_mon = poly_mon + 1
-           
-        END IF
+           j = j + 1
 
-        j = j + 1
+        END IF
         
      END DO
 
-
-     IF (an_per_ch == ideal_an_per_ch) THEN
+     IF (an_per_ch == ideal_an_per_ch .AND. is_ion_sep .NE. 1) THEN
 
         bondid_new = bondtemp
         CALL CHECK_BOND_TYPES(i, bid_start, bondid_new)
@@ -540,9 +481,23 @@ SUBROUTINE INPCOR()
      END IF
      
   END DO
-
+  PRINT *, "------Generated mixed VEC-anion chains------------"
+  
   btype_poly_VEC = SUM(bflag_arr(:,1)) ! # of btypes in poly_VEC
 
+  ! Create pure polyanions if necessary
+  IF(is_ion_sep) THEN
+     PRINT *, "------Generating pure polyanions---------------"
+     CALL CREATE_PURE_POLY_ANIONS(i,k,bondtemp)
+     i = i + N_poly - 1
+  END IF
+  PRINT *, "------Generated pure polyanions-------------------"
+  
+  ! Create unpolymerized monomers
+  PRINT *, "------Generating unpolymerized chains-------------"
+  CALL CREATE_UNPOLYMERIZED_VEC_MONOMERS(i,k,bondtemp)
+  PRINT *, "------Generated unpolymerized chains--------------"
+  
   PRINT *, "---------Polymerized chain data-------------------"
   PRINT *, "Ideal number of polymer blobs: ", N_poly*blob_per_ch
   PRINT *, "Total number of polymer blobs: ", k
@@ -550,63 +505,9 @@ SUBROUTINE INPCOR()
   PRINT *, "Number of bond types in poly VEC: ", btype_poly_VEC
   PRINT *, "------Generated polymerized chains----------------"
 
-! Create unpolymerized polymer (VEC) monomers
-  DO un_chid = i, i+T_unpoly_VEC-1
 
-     ! Head VEC blob
-     k = k + 1; cgcnt = 1
-     theta     = math_pi*RAN1(X)
-     phi       = 2*math_pi*RAN1(X)
-     rxyz(k,1) = RAN1(X)*boxl_x
-     rxyz(k,2) = RAN1(X)*boxl_y
-     rxyz(k,3) = RAN1(X)*boxl_z
-
-     ! Create atom types here
-     aidvals(k,1) = k ! Atom ID
-     aidvals(k,2) = un_chid ! Mol ID
-     aidvals(k,3) = CG_per_mon + 2 ! Atom type
-     charge(k)    = (0.5*(1+CG_per_mon)-REAL(cgcnt))*2*charge_poly   
-     
-     IF(un_chid == i) bid_start = bondtemp + 1
-     DO cgcnt = 2, CG_per_mon
-
-        k = k + 1
-        bondtemp  = bondtemp + 1
-        
-        theta     = math_pi*RAN1(X)
-        phi       = 2*math_pi*RAN1(X)
-        rxyz(k,1) = rxyz(k-1,1) + r0init*sin(theta)*cos(phi)
-        rxyz(k,2) = rxyz(k-1,2) + r0init*sin(theta)*sin(phi)
-        rxyz(k,3) = rxyz(k-1,3) + r0init*cos(theta)
-        aidvals(k,1) = k
-        aidvals(k,2) = un_chid
-        aidvals(k,3) = CG_per_mon + cgcnt + 1 !cgcnt is from 2; so +1
-        charge(k)    = (0.5*(1+CG_per_mon)-REAL(cgcnt))*2*charge_poly 
-        CALL ASSIGN_BOND_TOPO(bondtemp,aidvals(k-1,1),aidvals(k,1)&
-             &,260)
-        
-     END DO
-
-     ! For consistency in bflag_arr
-     IF(un_chid == i) CALL CHECK_BOND_TYPES(un_chid,bid_start&
-          &,bondtemp)
-
-  END DO
-  PRINT *, "------Generated unpolymerized chains--------------"
-
-! Create lithium cations
-
-  DO i = k+1, k + N_cations
-  
-     rxyz(i,1) = RAN1(X)*boxl_x
-     rxyz(i,2) = RAN1(X)*boxl_y
-     rxyz(i,3) = RAN1(X)*boxl_z
-     aidvals(i,1) = i
-     aidvals(i,2) = N_poly + T_unpoly_VEC + 1
-     aidvals(i,3) = CG_per_mon*(1 + CEILING(frac_unpoly)) + 2
-     charge(i)    = 1.0
-        
-  END DO
+  PRINT *, "------Generating lithium cations-------------------"     
+  CALL CREATE_LITHIUM_CATIONS()
   PRINT *, "------Generated lithium cations--------------------"     
 
   IF (unwrapped .EQV. .false.) THEN
@@ -653,6 +554,7 @@ SUBROUTINE INPCOR()
 END SUBROUTINE INPCOR
 
 !--------------------------------------------------------------------
+
 SUBROUTINE CHECK_ARRAY_BOUNDS(chid,aid,bid,arr_bound)
 
   USE PARAMS
@@ -669,6 +571,300 @@ SUBROUTINE CHECK_ARRAY_BOUNDS(chid,aid,bid,arr_bound)
   END IF
 
 END SUBROUTINE CHECK_ARRAY_BOUNDS
+!--------------------------------------------------------------------
+
+SUBROUTINE CREATE_FIRST_VEC_MONOMER(i, cgcnt, theta, phi, k, bondtemp)
+
+  USE PARAMS
+  IMPLICIT NONE
+
+  INTEGER, INTENT(IN)  :: i, cgcnt
+  REAL, INTENT(IN) :: theta, phi
+  INTEGER, INTENT(INOUT) :: k, bondtemp
+  REAL, PARAMETER :: r0init  = 0.97
+
+  rxyz(k,1) = RAN1(X)*boxl_x
+  rxyz(k,2) = RAN1(X)*boxl_y
+  rxyz(k,3) = RAN1(X)*boxl_z
+  
+  ! Create atom types here
+  aidvals(k,1) = k ! Atom ID
+  aidvals(k,2) = i ! Mol ID
+  aidvals(k,3) = 1 ! Atom type
+  charge(k)    = (0.5*(1+CG_per_mon)-REAL(cgcnt))*2*charge_poly
+     
+  DO cgcnt = 2, CG_per_mon
+
+     k = (i-1)*blob_per_ch + cgcnt
+     bondtemp     = bondtemp + 1
+     CALL CHECK_ARRAY_BOUNDS(i,k,bondtemp,arr_bound)
+     
+     theta     = math_pi*RAN1(X)
+     phi       = 2*math_pi*RAN1(X)
+     rxyz(k,1) = rxyz(k-1,1) + r0init*sin(theta)*cos(phi)
+     rxyz(k,2) = rxyz(k-1,2) + r0init*sin(theta)*sin(phi)
+     rxyz(k,3) = rxyz(k-1,3) + r0init*cos(theta)
+     aidvals(k,1) = k
+     aidvals(k,2) = i
+     aidvals(k,3) = cgcnt
+     charge(k)    = (0.5*(1+CG_per_mon)-REAL(cgcnt))*2*charge_poly 
+     CALL ASSIGN_BOND_TOPO(bondtemp,aidvals(k-1,1),aidvals(k,1)&
+          &,160)
+        
+  END DO
+  
+END SUBROUTINE CREATE_FIRST_VEC_MONOMER
+
+!--------------------------------------------------------------------
+
+SUBROUTINE CREATE_ANION_IN_MIXEDCHAIN(i,cgcnt,theta,phi,k,bondtemp&
+     &,an_per_ch)
+
+  USE PARAMS
+  IMPLICIT NONE
+
+  INTEGER, INTENT(IN)  :: i, cgcnt
+  REAL, INTENT(IN) :: theta, phi
+  INTEGER, INTENT(INOUT) :: k,bondtemp,an_per_ch
+  REAL, PARAMETER :: r0init  = 0.97
+  
+  ! Generate anions bonded to the backbone
+
+  aidvals(k+1,1) = k + 1
+  aidvals(k+1,2) = i
+  aidvals(k+1,3) = CG_per_mon + 1
+  charge(k+1)    = -1.0
+  
+  IF(aidvals(k,3) == CG_per_mon + 1) THEN !anion-anion
+     rxyz(k+1,1) = rxyz(k,1) + r0init*sin(theta)*cos(phi)
+     rxyz(k+1,2) = rxyz(k,2) + r0init*sin(theta)*sin(phi)
+     rxyz(k+1,3) = rxyz(k,3) + r0init*cos(theta)
+     CALL ASSIGN_BOND_TOPO(bondtemp,aidvals(k+1,1),aidvals(k,1),100)
+     
+  ELSEIF(aidvals(k,3) == 1) THEN ! Wrong choice
+     
+     PRINT *, "WRONG CHOICE" , k
+     STOP
+     
+  ELSE ! poly_mon - anion bond
+     rxyz(k+1,1) = rxyz(k+1-CG_per_mon,1) + r0init*sin(theta)*cos(phi)
+     rxyz(k+1,2) = rxyz(k+1-CG_per_mon,2) + r0init*sin(theta)*sin(phi)
+     rxyz(k+1,3) = rxyz(k+1-CG_per_mon,3) + r0init*cos(theta)
+     CALL ASSIGN_BOND_TOPO(bondtemp,aidvals(k+1,1),aidvals(k+1&
+          &-CG_per_mon,1),100)
+     
+  END IF
+     
+  an_per_ch = an_per_ch + 1 ! update an_per_ch
+  k = k + 1 ! pseudo update if anion-anion bond is formed
+      
+END SUBROUTINE CREATE_ANION_IN_MIXEDCHAIN
+
+!--------------------------------------------------------------------
+
+SUBROUTINE CREATE_VEC_IN_MIXEDCHAIN(i,cgcnt,theta,phi,k,bondtemp)
+
+  USE PARAMS
+  IMPLICIT NONE
+
+  INTEGER, INTENT(IN)  :: i, cgcnt
+  REAL, INTENT(IN) :: theta, phi
+  INTEGER, INTENT(IN) :: k,bondtemp
+  REAL, PARAMETER :: r0init  = 0.97
+
+  !CG Blobs
+  aidvals(k,1) = k
+  aidvals(k,2) = i
+  aidvals(k,3) = cgcnt
+  charge(k)    = (0.5*(1+CG_per_mon)-REAL(cgcnt))*2*charge_poly
+  
+  IF (cgcnt == 1) THEN
+     IF(aidvals(k-1,3) == CG_per_mon + 1) THEN !poly_mon-anion
+        rxyz(k,1) = rxyz(k-1,1) + r0init*sin(theta)*cos(phi)
+        rxyz(k,2) = rxyz(k-1,2) + r0init*sin(theta)*sin(phi)
+        rxyz(k,3) = rxyz(k-1,3) + r0init*cos(theta)
+        CALL ASSIGN_BOND_TOPO(bondtemp,aidvals(k-1,1),aidvals(k,1)&
+             &,200)
+     ELSE !poly_mon_(k-1) - poly_mon_k
+        rxyz(k,1) = rxyz(k-CG_per_mon,1) + r0init*sin(theta)*cos(phi)
+        rxyz(k,2) = rxyz(k-CG_per_mon,2) + r0init*sin(theta)*sin(phi)
+        rxyz(k,3) = rxyz(k-CG_per_mon,3) + r0init*cos(theta)
+        CALL ASSIGN_BOND_TOPO(bondtemp,aidvals(k-CG_per_mon,1)&
+             &,aidvals(k,1),200)
+     END IF
+  ELSE !poly_mon_k - poly_mon_k (blob-blob connection)
+     rxyz(k,1) = rxyz(k-1,1) + r0init*sin(theta)*cos(phi)
+     rxyz(k,2) = rxyz(k-1,2) + r0init*sin(theta)*sin(phi)
+     rxyz(k,3) = rxyz(k-1,3) + r0init*cos(theta)
+     CALL ASSIGN_BOND_TOPO(bondtemp,aidvals(k-1,1),aidvals(k,1),200)
+  END IF
+
+END SUBROUTINE CREATE_VEC_IN_MIXEDCHAIN
+  
+!--------------------------------------------------------------------
+
+SUBROUTINE CREATE_PURE_VEC_CHAINS(i,cgcnt,theta,phi,k,bondtemp)
+
+  USE PARAMS
+  IMPLICIT NONE
+
+  INTEGER, INTENT(IN)  :: i, cgcnt
+  REAL, INTENT(IN) :: theta, phi
+  INTEGER, INTENT(IN) :: k, bondtemp
+  REAL, PARAMETER :: r0init  = 0.97
+
+  !CG Blobs
+  aidvals(k,1) = k
+  aidvals(k,2) = i
+  aidvals(k,3) = cgcnt
+  charge(k)    = (0.5*(1+CG_per_mon)-REAL(cgcnt))*2*charge_poly
+  
+  IF (cgcnt == 1) THEN
+     rxyz(k,1) = rxyz(k-CG_per_mon,1) + r0init*sin(theta)*cos(phi)
+     rxyz(k,2) = rxyz(k-CG_per_mon,2) + r0init*sin(theta)*sin(phi)
+     rxyz(k,3) = rxyz(k-CG_per_mon,3) + r0init*cos(theta)
+     CALL ASSIGN_BOND_TOPO(bondtemp,aidvals(k-CG_per_mon,1),aidvals(k&
+          &,1),200)
+  ELSE !poly_mon_k - poly_mon_k (blob-blob connection)
+     rxyz(k,1) = rxyz(k-1,1) + r0init*sin(theta)*cos(phi)
+     rxyz(k,2) = rxyz(k-1,2) + r0init*sin(theta)*sin(phi)
+     rxyz(k,3) = rxyz(k-1,3) + r0init*cos(theta)
+     CALL ASSIGN_BOND_TOPO(bondtemp,aidvals(k-1,1),aidvals(k,1),200)
+  END IF
+
+END SUBROUTINE CREATE_PURE_VEC_CHAINS
+  
+!--------------------------------------------------------------------
+
+SUBROUTINE CREATE_PURE_POLY_ANIONS(i,k,bondtemp)
+
+  USE PARAMS
+  IMPLICIT NONE
+
+  INTEGER, INTENT(IN)  :: i
+  INTEGER, INTENT(INOUT) :: k,bondtemp
+  REAL, PARAMETER :: r0init  = 0.97
+  INTEGER :: polyan_id, dum_id
+  REAL, INTENT :: theta, phi
+  
+  !Polyanion blobs
+  DO polyan_id = i, i + N_poly-1
+
+     k = k + 1 
+     aidvals(k,1) = k
+     aidvals(k,2) = polyan_id
+     aidvals(k,3) = CG_per_mon + 1
+     charge(k)    = -1
+
+     theta     = math_pi*RAN1(X)
+     phi       = 2*math_pi*RAN1(X)
+     rxyz(k,1) = RAN1(X)*boxl_x
+     rxyz(k,2) = RAN1(X)*boxl_y
+     rxyz(k,3) = RAN1(X)*boxl_z
+
+     DO dum_id = 2,ideal_an_per_ch
+        k = k + 1
+        aidvals(k,1) = k
+        aidvals(k,2) = polyan_id
+        aidvals(k,3) = cgcnt
+        charge(k)    = -1
+        
+        rxyz(k,1) = rxyz(k-1,1) + r0init*sin(theta)*cos(phi)
+        rxyz(k,2) = rxyz(k-1,2) + r0init*sin(theta)*sin(phi)
+        rxyz(k,3) = rxyz(k-1,3) + r0init*cos(theta)
+        CALL ASSIGN_BOND_TOPO(bondtemp,aidvals(k-1,1),aidvals(k,1)&
+             &,200)
+
+     END DO
+
+  END DO
+
+  
+END SUBROUTINE CREATE_PURE_POLY_ANIONS
+  
+!--------------------------------------------------------------------
+
+SUBROUTINE CREATE_UNPOLYMERIZED_VEC_MONOMERS(i,k,bondtemp)
+
+  USE PARAMS
+  IMPLICIT NONE
+
+  INTEGER, INTENT(IN)  :: i
+  INTEGER, INTENT(INOUT) :: k,bondtemp
+  REAL, PARAMETER :: r0init  = 0.97
+  REAL :: theta, phi
+  INTEGER :: un_chid
+
+  ! Create unpolymerized polymer (VEC) monomers
+  DO un_chid = i, i+T_unpoly_VEC-1
+
+     ! Head VEC blob
+     k = k + 1; cgcnt = 1
+     theta     = math_pi*RAN1(X)
+     phi       = 2*math_pi*RAN1(X)
+     rxyz(k,1) = RAN1(X)*boxl_x
+     rxyz(k,2) = RAN1(X)*boxl_y
+     rxyz(k,3) = RAN1(X)*boxl_z
+
+     ! Create atom types here
+     aidvals(k,1) = k ! Atom ID
+     aidvals(k,2) = un_chid ! Mol ID
+     aidvals(k,3) = CG_per_mon + 2 ! Atom type
+     charge(k)    = (0.5*(1+CG_per_mon)-REAL(cgcnt))*2*charge_poly   
+     
+     IF(un_chid == i) bid_start = bondtemp + 1
+     DO cgcnt = 2, CG_per_mon
+
+        k = k + 1
+        bondtemp  = bondtemp + 1
+        
+        theta     = math_pi*RAN1(X)
+        phi       = 2*math_pi*RAN1(X)
+        rxyz(k,1) = rxyz(k-1,1) + r0init*sin(theta)*cos(phi)
+        rxyz(k,2) = rxyz(k-1,2) + r0init*sin(theta)*sin(phi)
+        rxyz(k,3) = rxyz(k-1,3) + r0init*cos(theta)
+        aidvals(k,1) = k
+        aidvals(k,2) = un_chid
+        aidvals(k,3) = CG_per_mon + cgcnt + 1 !cgcnt is from 2; so +1
+        charge(k)    = (0.5*(1+CG_per_mon)-REAL(cgcnt))*2*charge_poly 
+        CALL ASSIGN_BOND_TOPO(bondtemp,aidvals(k-1,1),aidvals(k,1)&
+             &,260)
+        
+     END DO
+
+     ! For consistency in bflag_arr
+     IF(un_chid == i) CALL CHECK_BOND_TYPES(un_chid,bid_start&
+          &,bondtemp)
+
+  END DO
+
+END SUBROUTINE CREATE_UNPOLYMERIZED_MONOMERS
+
+!--------------------------------------------------------------------
+
+! Create lithium cations
+SUBROUTINE CREATE_LITHIUM_CATIONS(k)
+
+  USE PARAMS
+  IMPLICIT NONE
+
+  INTEGER, INTENT(INOUT) :: k
+  REAL, PARAMETER :: r0init  = 0.97
+
+  DO i = k+1, k + N_cations
+  
+     rxyz(i,1) = RAN1(X)*boxl_x
+     rxyz(i,2) = RAN1(X)*boxl_y
+     rxyz(i,3) = RAN1(X)*boxl_z
+     aidvals(i,1) = i
+     aidvals(i,2) = N_poly + T_unpoly_VEC + 1
+     aidvals(i,3) = CG_per_mon*(1 + CEILING(frac_unpoly)) + 2
+     charge(i)    = 1.0
+        
+  END DO
+
+END SUBROUTINE CREATE_LITHIUM_CATIONS
+
 !--------------------------------------------------------------------
 
 SUBROUTINE ASSIGN_BOND_TOPO(bid,aid1,aid2,iderr)
