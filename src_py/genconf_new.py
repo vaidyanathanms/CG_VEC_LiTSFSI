@@ -33,7 +33,7 @@ num_cores = 36 # Number of cores per node
 hpc_sys   = 'kestrel'  # Opt: kestrel, cades
 
 #---------input details - Topology--------------------------------
-frac_anions  = [1/10, 1/5]#, 1/10, 1/5] # fraction of anions
+frac_anions  = [1/10]#, 1/10, 1/5] # fraction of anions
 tot_mons     = 4000 # total number of MONOMERS in the poly CHAIN
 chain_mw     = [40]#,60,90] # of monomer range per chain
 num_chains   = [int(tot_mons/x) for x in chain_mw] # of polymerized ch
@@ -101,7 +101,7 @@ src_f90    = home_path + '/all_codes/files_CG-SIC/src_f90' #f90 dir
 src_lmp    = home_path + '/all_codes/files_CG-SIC/src_lmp' #lmp dir
 src_tcl    = home_path + '/all_codes/files_CG-SIC/src_tcl' #tcl dir
 scratchdir = scr_path  + '/cg_sic' #output headdir
-scr_head   = 'sic_mixedvec_listsfi_' + str(blob_charge) # head dir scratch'
+scr_head   = 'sic_mixedvec_listsfi2_' + str(blob_charge) # head dir scratch'
 
 #--------lammps executable-------------------------------------
 if hpc_sys == 'kestrel':
