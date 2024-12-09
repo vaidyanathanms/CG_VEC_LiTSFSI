@@ -483,8 +483,24 @@ SUBROUTINE INPCOR()
   END DO
   PRINT *, "------Generated mixed VEC-anion chains------------"
   
+
+  PRINT *, "---------Polymerized chain data-------------------"
+  PRINT *, "Ideal number of polymer blobs: ", N_poly*blob_per_ch
+  PRINT *, "Total number of polymer blobs: ", k
+  PRINT *, "NCations, NAnions ", N_cations, N_anions
+  PRINT *, "Number of bond types in poly VEC: ", btype_poly_VEC
+  PRINT *, "------Generated polymerized chains----------------"
+
+
   btype_poly_VEC = SUM(bflag_arr(:,1)) ! # of btypes in poly_VEC
 
+  ! Create unpolymerized monomers
+  IF (frac_unpoly > 0.0) THEN
+     PRINT *, "------Generating unpolymerized chains-------------"
+     CALL CREATE_UNPOLYMERIZED_VEC_MONOMERS(i,cgcnt,k,bondtemp,bid_start)
+     PRINT *, "------Generated unpolymerized chains--------------"
+  END IF
+  
   ! Create pure polyanions if necessary
   IF(is_ion_sep) THEN
      PRINT *, "------Generating pure polyanions---------------"
@@ -492,19 +508,6 @@ SUBROUTINE INPCOR()
      i = i + N_poly - 1
      PRINT *, "------Generated pure polyanions----------------"
   END IF
-
-  
-  ! Create unpolymerized monomers
-  PRINT *, "------Generating unpolymerized chains-------------"
-  CALL CREATE_UNPOLYMERIZED_VEC_MONOMERS(i,cgcnt,k,bondtemp,bid_start)
-  PRINT *, "------Generated unpolymerized chains--------------"
-  
-  PRINT *, "---------Polymerized chain data-------------------"
-  PRINT *, "Ideal number of polymer blobs: ", N_poly*blob_per_ch
-  PRINT *, "Total number of polymer blobs: ", k
-  PRINT *, "NCations, NAnions ", N_cations, N_anions
-  PRINT *, "Number of bond types in poly VEC: ", btype_poly_VEC
-  PRINT *, "------Generated polymerized chains----------------"
 
 
   PRINT *, "------Generating lithium cations-------------------"     
