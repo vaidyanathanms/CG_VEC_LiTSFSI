@@ -1,24 +1,21 @@
 #!/bin/bash
 
-#SBATCH --job-name py_jobname
+#SBATCH -A chem
+#SBATCH -p burst
+#SBATCH --time=py_tottime:30:00
 #SBATCH --nodes=py_nnodes
 #SBATCH --ntasks-per-node=py_ncores
-#SBATCH --time=py_tottime:30:00
-#SBATCH --account=iontransport
-#SBATCH --error=std.err_%j
-#SBATCH --output=std.out_%j
-#SBATCH --partition shared
+#SBATCH --mem=24G
+#SBATCH -J py_jobname
+#SBATCH -o allresults/out.%J
+#SBATCH -e allresults/err.%J
 
-# Signal job start job
-cd $SLURM_SUBMIT_DIR
 echo "begin job.."
 echo $PWD
 
-
-# Run jobs
 export OMP_NUM_THREADS=py_ncores
-./ana.o py_anainp
 
+./ana.o py_anainp
 wait
 
 # Clean-up
@@ -29,11 +26,5 @@ mv rdf_pyconfig allresults
 mv log.pyconfig allresults
 mv anainp_pycase.txt allresults
 mv jobana_pycase.sh allresults
-mv std.err_%j allresults
-mv std.err_%j allresults
-
-wait
-
-rm anainp_var.txt
 
 echo "Analysis completed ..."
