@@ -21,7 +21,7 @@ MODULE PARAMS
   ! VEC monomer fraction: domain = [0,1)
 
   REAL,    PARAMETER :: charge_poly = 0.2   ! Charge on polymer blob
-  INTEGER, PARAMETER :: is_ion_sep  = 1 ! ions in chain or not
+  INTEGER, PARAMETER :: is_ion_sep  = 0 ! ions in chain or not
   INTEGER, PARAMETER :: CG_per_mon  = 2 ! No. of CG blobs per VEC 
   REAL,    PARAMETER :: density     = 0.85  ! System density
 

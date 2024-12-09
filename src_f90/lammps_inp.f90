@@ -360,6 +360,7 @@ SUBROUTINE INPCOR()
   ! Polymerized chains
   DO WHILE (i .LE. N_poly)
 
+     print *, "Chain ID: ", i
      bondtemp = bondid_new; bid_start = bondid_new + 1
      an_per_ch = 0
      cgcnt = 1
@@ -372,7 +373,7 @@ SUBROUTINE INPCOR()
      phi    = 2*math_pi*RAN1(X)
 
      CALL CREATE_FIRST_VEC_MONOMER(i,theta,phi,cgcnt,k,bondtemp&
-          &,bid_start)    
+          &,bid_start)
 
      j = 2
      DO WHILE (j .LE. M_poly) !j runs over MONOMERS and not BLOBS
@@ -471,7 +472,7 @@ SUBROUTINE INPCOR()
         
      END DO
 
-     IF (an_per_ch == ideal_an_per_ch .AND. is_ion_sep .NE. 1) THEN
+     IF (an_per_ch == ideal_an_per_ch .AND. is_ion_sep == 0) THEN
 
         bondid_new = bondtemp
         CALL CHECK_BOND_TYPES(i, bid_start, bondid_new)
@@ -489,12 +490,13 @@ SUBROUTINE INPCOR()
      PRINT *, "------Generating pure polyanions---------------"
      CALL CREATE_PURE_POLY_ANIONS(i,cgcnt,k,bondtemp)
      i = i + N_poly - 1
+     PRINT *, "------Generated pure polyanions----------------"
   END IF
-  PRINT *, "------Generated pure polyanions-------------------"
+
   
   ! Create unpolymerized monomers
   PRINT *, "------Generating unpolymerized chains-------------"
-  CALL CREATE_UNPOLYMERIZED_VEC_MONOMERS(i,cgcnt,k,bondtemp)
+  CALL CREATE_UNPOLYMERIZED_VEC_MONOMERS(i,cgcnt,k,bondtemp,bid_start)
   PRINT *, "------Generated unpolymerized chains--------------"
   
   PRINT *, "---------Polymerized chain data-------------------"
