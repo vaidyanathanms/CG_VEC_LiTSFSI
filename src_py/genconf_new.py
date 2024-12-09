@@ -41,6 +41,7 @@ unpoly_farr  = [0.6] # fraction of unpolymerized mons
 density      = 0.8 # system density
 cg_per_mon   = 2 # number of blobs per polymer monomer
 blob_charge  = 0.25 # charge per blob
+is_anion_sep = 0 # 0 - anions with VECs, 1 - separate polyanion
 nrepeats     = 1 # number of replica
 
 #---------input details - Pair Coeff--------------------------------
@@ -183,7 +184,8 @@ for mw_ch in range(len(chain_mw)):
                 lmp_par,lmp_data_fyle = create_paramfyl_for_datafyl(destdir,'lmp_params_var.f90',num_chains[mw_ch],\
                                                                     chain_mw[mw_ch],casenum,\
                                                                     round(frac_anions[fr_an],2),density,\
-                                                                    cg_per_mon,blob_charge,unpoly_frac=unpoly_frac)
+                                                                    cg_per_mon,blob_charge,unpoly_frac=unpoly_frac,\
+                                                                    is_anion_sep)
 
                 compile_and_run_inpgenfyles(lmp_par,destdir,f90_comp=f90_comp)            
 
