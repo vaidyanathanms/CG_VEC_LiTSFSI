@@ -14,8 +14,7 @@ MODULE PARAMS
   ! Parameter data for creating the data file - inputs from python script
 
   INTEGER, PARAMETER :: M_poly_dum = py_mwchain ! dummy i/p for MW
-  INTEGER, PARAMETER :: N_poly     = py_nchains     ! # of
-  ! polymerized chains
+  INTEGER, PARAMETER :: N_poly     = py_nchains ! # of polymerized chains
   REAL,    PARAMETER :: an_poly_rat = py_fracanions  ! Ratio b/w anion
   ! and VEC monomers: domain = [0,1) in polymerized chains 
   REAL,    PARAMETER :: frac_unpoly = py_unpoly_frac ! Unpolymerized
@@ -71,6 +70,11 @@ MODULE PARAMS
   REAL :: boxl_x, boxl_y, boxl_z
   REAL :: volbox
   INTEGER :: npolyatoms
+
+  ! Math and other constants
+  
+  REAL, PARAMETER :: r0init  = 0.97
+  REAL, PARAMETER :: math_pi = 3.14159265359
 
   ! Flags for creating the data file
 

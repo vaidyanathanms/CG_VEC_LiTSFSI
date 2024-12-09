@@ -342,8 +342,6 @@ SUBROUTINE INPCOR()
   INTEGER :: i,j,k,u,v,ierror
   INTEGER :: an_per_ch, cgcnt, poly_mon
   INTEGER :: bid_start, bondid_new, bondtemp
-  REAL, PARAMETER :: r0init  = 0.97
-  REAL, PARAMETER :: math_pi = 3.14159265359
   REAL :: theta, phi
   REAL :: csum
   LOGICAL :: arr_bound
@@ -373,7 +371,8 @@ SUBROUTINE INPCOR()
      theta  = math_pi*RAN1(X)
      phi    = 2*math_pi*RAN1(X)
 
-     CALL CREATE_FIRST_VEC_MONOMER(i,cgcnt,theta,phi,k,bondtemp)    
+     CALL CREATE_FIRST_VEC_MONOMER(i,theta,phi,cgcnt,k,bondtemp&
+          &,bid_start)    
 
      j = 2
      DO WHILE (j .LE. M_poly) !j runs over MONOMERS and not BLOBS
@@ -488,14 +487,14 @@ SUBROUTINE INPCOR()
   ! Create pure polyanions if necessary
   IF(is_ion_sep) THEN
      PRINT *, "------Generating pure polyanions---------------"
-     CALL CREATE_PURE_POLY_ANIONS(i,k,bondtemp)
+     CALL CREATE_PURE_POLY_ANIONS(i,cgcnt,k,bondtemp)
      i = i + N_poly - 1
   END IF
   PRINT *, "------Generated pure polyanions-------------------"
   
   ! Create unpolymerized monomers
   PRINT *, "------Generating unpolymerized chains-------------"
-  CALL CREATE_UNPOLYMERIZED_VEC_MONOMERS(i,k,bondtemp)
+  CALL CREATE_UNPOLYMERIZED_VEC_MONOMERS(i,cgcnt,k,bondtemp)
   PRINT *, "------Generated unpolymerized chains--------------"
   
   PRINT *, "---------Polymerized chain data-------------------"
@@ -507,7 +506,7 @@ SUBROUTINE INPCOR()
 
 
   PRINT *, "------Generating lithium cations-------------------"     
-  CALL CREATE_LITHIUM_CATIONS()
+  CALL CREATE_LITHIUM_CATIONS(k)
   PRINT *, "------Generated lithium cations--------------------"     
 
   IF (unwrapped .EQV. .false.) THEN
@@ -573,15 +572,15 @@ SUBROUTINE CHECK_ARRAY_BOUNDS(chid,aid,bid,arr_bound)
 END SUBROUTINE CHECK_ARRAY_BOUNDS
 !--------------------------------------------------------------------
 
-SUBROUTINE CREATE_FIRST_VEC_MONOMER(i, cgcnt, theta, phi, k, bondtemp)
+SUBROUTINE CREATE_FIRST_VEC_MONOMER(i,theta,phi,cgcnt,k,bondtemp)
 
   USE PARAMS
   IMPLICIT NONE
 
-  INTEGER, INTENT(IN)  :: i, cgcnt
-  REAL, INTENT(IN) :: theta, phi
-  INTEGER, INTENT(INOUT) :: k, bondtemp
-  REAL, PARAMETER :: r0init  = 0.97
+  INTEGER, INTENT(IN)  :: i
+  REAL, INTENT(INOUT) :: theta, phi
+  INTEGER, INTENT(INOUT) :: k, bondtemp, cgcnt
+  LOGICAL :: arr_bound
 
   rxyz(k,1) = RAN1(X)*boxl_x
   rxyz(k,2) = RAN1(X)*boxl_y
@@ -626,7 +625,6 @@ SUBROUTINE CREATE_ANION_IN_MIXEDCHAIN(i,cgcnt,theta,phi,k,bondtemp&
   INTEGER, INTENT(IN)  :: i, cgcnt
   REAL, INTENT(IN) :: theta, phi
   INTEGER, INTENT(INOUT) :: k,bondtemp,an_per_ch
-  REAL, PARAMETER :: r0init  = 0.97
   
   ! Generate anions bonded to the backbone
 
@@ -670,7 +668,6 @@ SUBROUTINE CREATE_VEC_IN_MIXEDCHAIN(i,cgcnt,theta,phi,k,bondtemp)
   INTEGER, INTENT(IN)  :: i, cgcnt
   REAL, INTENT(IN) :: theta, phi
   INTEGER, INTENT(IN) :: k,bondtemp
-  REAL, PARAMETER :: r0init  = 0.97
 
   !CG Blobs
   aidvals(k,1) = k
@@ -711,7 +708,6 @@ SUBROUTINE CREATE_PURE_VEC_CHAINS(i,cgcnt,theta,phi,k,bondtemp)
   INTEGER, INTENT(IN)  :: i, cgcnt
   REAL, INTENT(IN) :: theta, phi
   INTEGER, INTENT(IN) :: k, bondtemp
-  REAL, PARAMETER :: r0init  = 0.97
 
   !CG Blobs
   aidvals(k,1) = k
@@ -736,16 +732,15 @@ END SUBROUTINE CREATE_PURE_VEC_CHAINS
   
 !--------------------------------------------------------------------
 
-SUBROUTINE CREATE_PURE_POLY_ANIONS(i,k,bondtemp)
+SUBROUTINE CREATE_PURE_POLY_ANIONS(i,cgcnt,k,bondtemp)
 
   USE PARAMS
   IMPLICIT NONE
 
   INTEGER, INTENT(IN)  :: i
-  INTEGER, INTENT(INOUT) :: k,bondtemp
-  REAL, PARAMETER :: r0init  = 0.97
+  INTEGER, INTENT(INOUT) :: cgcnt,k,bondtemp
   INTEGER :: polyan_id, dum_id
-  REAL, INTENT :: theta, phi
+  REAL :: theta, phi
   
   !Polyanion blobs
   DO polyan_id = i, i + N_poly-1
@@ -784,14 +779,14 @@ END SUBROUTINE CREATE_PURE_POLY_ANIONS
   
 !--------------------------------------------------------------------
 
-SUBROUTINE CREATE_UNPOLYMERIZED_VEC_MONOMERS(i,k,bondtemp)
+SUBROUTINE CREATE_UNPOLYMERIZED_VEC_MONOMERS(i,cgcnt,k,bondtemp&
+     &,bid_start)
 
   USE PARAMS
   IMPLICIT NONE
 
   INTEGER, INTENT(IN)  :: i
-  INTEGER, INTENT(INOUT) :: k,bondtemp
-  REAL, PARAMETER :: r0init  = 0.97
+  INTEGER, INTENT(INOUT) :: cgcnt,k,bondtemp,bid_start
   REAL :: theta, phi
   INTEGER :: un_chid
 
@@ -838,7 +833,7 @@ SUBROUTINE CREATE_UNPOLYMERIZED_VEC_MONOMERS(i,k,bondtemp)
 
   END DO
 
-END SUBROUTINE CREATE_UNPOLYMERIZED_MONOMERS
+END SUBROUTINE CREATE_UNPOLYMERIZED_VEC_MONOMERS
 
 !--------------------------------------------------------------------
 
@@ -849,17 +844,17 @@ SUBROUTINE CREATE_LITHIUM_CATIONS(k)
   IMPLICIT NONE
 
   INTEGER, INTENT(INOUT) :: k
-  REAL, PARAMETER :: r0init  = 0.97
-
-  DO i = k+1, k + N_cations
+  INTEGER :: li_id
   
-     rxyz(i,1) = RAN1(X)*boxl_x
-     rxyz(i,2) = RAN1(X)*boxl_y
-     rxyz(i,3) = RAN1(X)*boxl_z
-     aidvals(i,1) = i
-     aidvals(i,2) = N_poly + T_unpoly_VEC + 1
-     aidvals(i,3) = CG_per_mon*(1 + CEILING(frac_unpoly)) + 2
-     charge(i)    = 1.0
+  DO li_id = k+1, k + N_cations
+  
+     rxyz(li_id,1) = RAN1(X)*boxl_x
+     rxyz(li_id,2) = RAN1(X)*boxl_y
+     rxyz(li_id,3) = RAN1(X)*boxl_z
+     aidvals(li_id,1) = k+1
+     aidvals(li_id,2) = N_poly + T_unpoly_VEC + 1
+     aidvals(li_id,3) = CG_per_mon*(1 + CEILING(frac_unpoly)) + 2
+     charge(li_id)    = 1.0
         
   END DO
 
