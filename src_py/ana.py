@@ -19,7 +19,7 @@ from my_python_functions import run_analysis
 #---------input details----------------------------------------
 analyze_only = 'filelist' #latest, all, filename, filelist
 analist      = ['config_13000000.lammpstrj','config_9000000.lammpstrj',\
-                'config_7000000.lammpstrj','config_6000000.lammpstrj']
+                'config_7000000.lammpstrj','config_11500000.lammpstrj']
 frac_anions  = [1/20,1/15,1/10,1/5]#,1/20,1/10,1/6,1/5,1/3] # fraction of anions
 tot_mons     = 6000 # total number of MONOMERS in the poly CHAIN
 chain_mw     = [40]#60,40]#,60,90] # of monomer range per chain

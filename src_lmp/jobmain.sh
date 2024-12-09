@@ -1,7 +1,7 @@
 #!/bin/bash
 
-#SBATCH -A birthright
-#SBATCH -p high_mem_cd
+#SBATCH -A chem
+#SBATCH -p burst
 #SBATCH -t 08:30:00
 #SBATCH -N 1
 #SBATCH -n 32

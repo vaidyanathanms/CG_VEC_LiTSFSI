@@ -26,11 +26,11 @@ from my_python_functions import clean_backup_initfiles
 
 #---------input flags------------------------------------------
 #0-initial run  1- production
-restart   = 0  # For restarting from given configurations
+restart   = 1  # For restarting from given configurations
 num_hrs   = 47 # Total number of hours for run
 num_nodes = 6  # Number of nodes
 num_cores = 36 # Number of cores per node
-hpc_sys   = 'kestrel'  # Opt: kestrel, cades
+hpc_sys   = 'cades'  # Opt: kestrel, cades
 
 #---------input details - Topology--------------------------------
 frac_anions  = [1/20] #[1/5,1/10,1/15]#,1/20]#,1/20,1/10,1/6,1/5,1/3] # fraction of anions
