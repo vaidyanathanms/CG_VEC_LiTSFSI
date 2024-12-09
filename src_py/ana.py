@@ -34,7 +34,7 @@ freqfr       = 1 # freq of anaylsis
 tottime   = 3 # in hours
 nnodes    = 1 # number of nodes
 ncores    = 36 # number of cores
-hpc_sys   = 'kestrel'  # Opt: kestrel, cades
+hpc_sys   = 'cades'  # Opt: kestrel, cades
 
 #--------file_lists--------------------------------------------
 ana_files = ['analyze.f90','ana_params.f90','anainp_var.txt']

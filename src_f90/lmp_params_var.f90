@@ -39,9 +39,9 @@ MODULE PARAMS
   ! VECs (or uncharged moieties)
   INTEGER, PARAMETER :: T_VEC_mons  = (M_poly_dum-ideal_an_per_ch)&
        &*N_poly ! Tot. # of VECs in the system
-  INTEGER, PARAMETER :: T_poly_mons = INT(REAL(T_VEC_mons)*REAL(1&
+  INTEGER, PARAMETER :: T_poly_VEC = INT(REAL(T_VEC_mons)*REAL(1&
        &-frac_unpoly))  ! Tot. # of polymerized VEC mon
-  INTEGER, PARAMETER :: VEC_per_ch  = INT(REAL(T_poly_mons)&
+  INTEGER, PARAMETER :: VEC_per_ch  = INT(REAL(T_poly_VEC)&
        &/REAL(N_poly))  ! Number of VEC mons per chain
   INTEGER, PARAMETER :: T_unpoly_VEC = T_VEC_mons-T_poly_VEC ! Tot. #
   ! of unpolymerized mons

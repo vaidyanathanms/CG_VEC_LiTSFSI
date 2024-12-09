@@ -30,17 +30,17 @@ restart   = 1  # For restarting from given configurations
 num_hrs   = 47 # Total number of hours for run
 num_nodes = 6  # Number of nodes
 num_cores = 36 # Number of cores per node
-hpc_sys   = 'kestrel'  # Opt: kestrel, cades
+hpc_sys   = 'cades'  # Opt: kestrel, cades
 
 #---------input details - Topology--------------------------------
-frac_anions  = [1/10]#, 1/10, 1/5] # fraction of anions
+frac_anions  = [1/10,1/15,1/20]#, 1/10, 1/5] # fraction of anions
 tot_mons     = 4000 # total number of MONOMERS in the poly CHAIN
-chain_mw     = [40]#,60,90] # of monomer range per chain
+chain_mw     = [40,60] # of monomer range per chain
 num_chains   = [int(tot_mons/x) for x in chain_mw] # of polymerized ch
 unpoly_farr  = [0.6] # fraction of unpolymerized mons
 density      = 0.8 # system density
 cg_per_mon   = 2 # number of blobs per polymer monomer
-blob_charge  = 0.25 # charge per blob
+blob_charge  = 0.2 # charge per blob
 is_anion_sep = 0 # 0 - anions with VECs, 1 - separate polyanion
 nrepeats     = 1 # number of replica
 
@@ -102,7 +102,10 @@ src_f90    = home_path + '/all_codes/files_CG-SIC/src_f90' #f90 dir
 src_lmp    = home_path + '/all_codes/files_CG-SIC/src_lmp' #lmp dir
 src_tcl    = home_path + '/all_codes/files_CG-SIC/src_tcl' #tcl dir
 scratchdir = scr_path  + '/cg_sic' #output headdir
-scr_head   = 'sic_mixedvec_listsfi2_' + str(blob_charge) # head dir scratch'
+if is_anion_sep:
+    scr_head   = 'sic_mixedvec_free_listsfi_' + str(blob_charge) # head dir scratch'
+else:
+    scr_head   = 'sic_mixedvec_listsfi_' + str(blob_charge) # head dir scratch'
 
 #--------lammps executable-------------------------------------
 if hpc_sys == 'kestrel':
