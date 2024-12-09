@@ -55,13 +55,23 @@ SUBROUTINE LMP_COORD()
        &"write",iostat = ierror)
   
   IF(ierror /= 0) STOP "Failed to open datafile"
-  
-  IF(frac_unpoly == 0) THEN 
-     WRITE (10,*) "Data for CG p(mVEC-r-nLiMTSFI) simulations w/o unpo&
-          &lymerized VEC monomers"
+
+  IF(is_ion_sep == 0) THEN
+     IF(frac_unpoly == 0) THEN 
+        WRITE (10,*) "Data for CG p(mVEC-r-nLiMTSFI) simulations w/o u&
+             &npolymerized VEC monomers and no free anions"
+     ELSE
+        WRITE (10,*) "Data for CG p(mVEC-r-nLiMTSFI) simulations with unp&
+             &olymerized VEC monomers and no free anions"
+     END IF
   ELSE
-     WRITE (10,*) "Data for CG p(mVEC-r-nLiMTSFI) simulations with unp&
-          &olymerized VEC monomers"
+     IF(frac_unpoly == 0) THEN 
+        WRITE (10,*) "Data for CG p(mVEC-r-nLiMTSFI) simulations w/o u&
+             &npolymerized VEC monomers and with free anions"
+     ELSE
+        WRITE (10,*) "Data for CG p(mVEC-r-nLiMTSFI) simulations with unp&
+             &olymerized VEC monomers and with free anions"
+     END IF
   END IF
 
   WRITE (10,*) 
@@ -945,7 +955,7 @@ SUBROUTINE CREATEFILE() !CREATEFILE(narg)
   CHARACTER (LEN = 7) :: prefix = "VECdata"
   CHARACTER (LEN = 4) :: frat_char
  
-  WRITE(nmon_char,"(I0)") M_poly
+  WRITE(nmon_char,"(I0)") M_poly_dum
   WRITE(frat_char,"(F4.2)") an_poly_rat
 
   datafile = prefix//'_'//trim(adjustl(nmon_char))//'_'&
