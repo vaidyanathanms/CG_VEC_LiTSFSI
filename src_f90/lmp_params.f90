@@ -21,7 +21,7 @@ MODULE PARAMS
   ! VEC monomer fraction: domain = [0,1)
 
   REAL,    PARAMETER :: charge_poly = 0.2   ! Charge on polymer blob
-  INTEGER, PARAMETER :: is_ion_sep  = 0 ! ions in chain or not
+  INTEGER, PARAMETER :: is_ion_sep  = 1 ! ions in chain or not
   INTEGER, PARAMETER :: CG_per_mon  = 2 ! No. of CG blobs per VEC 
   REAL,    PARAMETER :: density     = 0.85  ! System density
 
@@ -88,7 +88,8 @@ MODULE PARAMS
   INTEGER, PARAMETER :: numdihdtypes = 0
   INTEGER, PARAMETER :: outfile  = 17
   INTEGER, PARAMETER :: nbonds = N_poly*(blob_per_ch-1) +&
-       & T_unpoly_VEC*(CG_per_mon-1)
+       & T_unpoly_VEC*(CG_per_mon-1) + is_ion_sep*N_poly&
+       &*(ideal_an_per_ch-1)  
   INTEGER, PARAMETER :: nangls = 0
   INTEGER, PARAMETER :: ndihds = 0
 

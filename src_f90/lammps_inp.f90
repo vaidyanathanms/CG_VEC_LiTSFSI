@@ -354,13 +354,12 @@ SUBROUTINE INPCOR()
 
   WRITE(outfile,*) "Generating chain configurations .. "
 
-  PRINT *, "------Generating mixed VEC-anion chains------------"
+  PRINT *, "------Generating mixed/pure VEC-anion chains--------"
   i = 1; bondid_new = 0; bflag_arr = 0
   
   ! Polymerized chains
   DO WHILE (i .LE. N_poly)
 
-     print *, "Chain ID: ", i
      bondtemp = bondid_new; bid_start = bondid_new + 1
      an_per_ch = 0
      cgcnt = 1
@@ -443,16 +442,17 @@ SUBROUTINE INPCOR()
            DO WHILE (cgcnt .LE. CG_per_mon)
               
               k = (i-1)*blob_per_ch + CG_per_mon*poly_mon + cgcnt
+
               bondtemp     = bondtemp + 1
               ! Check if more blobs/bonds are created than the array
               ! bounds
               CALL CHECK_ARRAY_BOUNDS(i,k,bondtemp,arr_bound)
-              
+
               IF (arr_bound .EQV. .TRUE.) THEN
-                 
+
                  theta     = math_pi*RAN1(X)
                  phi       = 2*math_pi*RAN1(X)
-                 CALL CREATE_PURE_VEC_CHAINS(i,cgcnt,theta,phi,k,&
+                 CALL CREATE_PURE_VEC_CHAINS(i,cgcnt,theta,phi,k&
                       &,bondtemp)
                  cgcnt = cgcnt + 1
                  
@@ -470,7 +470,7 @@ SUBROUTINE INPCOR()
 
         END IF
         
-     END DO
+     END DO ! End of making one mixed/pure VEC chain
 
      IF (an_per_ch == ideal_an_per_ch .AND. is_ion_sep == 0) THEN
 
@@ -478,10 +478,16 @@ SUBROUTINE INPCOR()
         CALL CHECK_BOND_TYPES(i, bid_start, bondid_new)
         i = i + 1
         
+     ELSE IF(is_ion_sep == 1) THEN 
+
+        bondid_new = bondtemp
+        CALL CHECK_BOND_TYPES(i, bid_start, bondid_new)
+        i = i + 1
+
      END IF
      
   END DO
-  PRINT *, "------Generated mixed VEC-anion chains------------"
+  PRINT *, "------Generated mixed/pure VEC-anion chains-------"
   
 
   PRINT *, "---------Polymerized chain data-------------------"
@@ -494,7 +500,7 @@ SUBROUTINE INPCOR()
 
   btype_poly_VEC = SUM(bflag_arr(:,1)) ! # of btypes in poly_VEC
 
-  ! Create unpolymerized monomers
+  ! Create unpolymerized monomers if necessary
   IF (frac_unpoly > 0.0) THEN
      PRINT *, "------Generating unpolymerized chains-------------"
      CALL CREATE_UNPOLYMERIZED_VEC_MONOMERS(i,cgcnt,k,bondtemp,bid_start)
@@ -508,7 +514,6 @@ SUBROUTINE INPCOR()
      i = i + N_poly - 1
      PRINT *, "------Generated pure polyanions----------------"
   END IF
-
 
   PRINT *, "------Generating lithium cations-------------------"     
   CALL CREATE_LITHIUM_CATIONS(k)
@@ -719,7 +724,7 @@ SUBROUTINE CREATE_PURE_VEC_CHAINS(i,cgcnt,theta,phi,k,bondtemp)
   aidvals(k,2) = i
   aidvals(k,3) = cgcnt
   charge(k)    = (0.5*(1+CG_per_mon)-REAL(cgcnt))*2*charge_poly
-  
+
   IF (cgcnt == 1) THEN
      rxyz(k,1) = rxyz(k-CG_per_mon,1) + r0init*sin(theta)*cos(phi)
      rxyz(k,2) = rxyz(k-CG_per_mon,2) + r0init*sin(theta)*sin(phi)
@@ -877,7 +882,7 @@ SUBROUTINE ASSIGN_BOND_TOPO(bid,aid1,aid2,iderr)
 
   atype1 = aidvals(aid1,3)
   atype2 = aidvals(aid2,3)
-  
+
   IF (aidvals(aid1,2) .LE. N_poly) THEN !Polymerized molecules
 
      IF (atype1 == atype2) THEN
