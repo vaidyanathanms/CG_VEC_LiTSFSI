@@ -20,6 +20,7 @@ iondiff
 cntriondiff
 3
 compute_rdf
-20 100 10 2
+1 30 10 3
 3 6
 2 6
+6 6
