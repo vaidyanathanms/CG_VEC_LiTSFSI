@@ -490,20 +490,20 @@ SUBROUTINE INPCOR()
   PRINT *, "------Generated mixed/pure VEC-anion chains-------"
   
 
+  btype_poly_VEC = SUM(bflag_arr(:,1)) ! # of btypes in poly_VEC
+
   PRINT *, "---------Polymerized chain data-------------------"
   PRINT *, "Ideal number of polymer blobs: ", N_poly*blob_per_ch
   PRINT *, "Total number of polymer blobs: ", k
   PRINT *, "NCations, NAnions ", N_cations, N_anions
   PRINT *, "Number of bond types in poly VEC: ", btype_poly_VEC
   PRINT *, "------Generated polymerized chains----------------"
-
-
-  btype_poly_VEC = SUM(bflag_arr(:,1)) ! # of btypes in poly_VEC
-
+  
   ! Create unpolymerized monomers if necessary
   IF (frac_unpoly > 0.0) THEN
      PRINT *, "------Generating unpolymerized chains-------------"
      CALL CREATE_UNPOLYMERIZED_VEC_MONOMERS(i,cgcnt,k,bondtemp,bid_start)
+     i = i + T_unpoly_VEC 
      PRINT *, "------Generated unpolymerized chains--------------"
   END IF
   
@@ -511,12 +511,12 @@ SUBROUTINE INPCOR()
   IF(is_ion_sep) THEN
      PRINT *, "------Generating pure polyanions---------------"
      CALL CREATE_PURE_POLY_ANIONS(i,cgcnt,k,bondtemp)
-     i = i + N_poly - 1
+     i = i + N_poly
      PRINT *, "------Generated pure polyanions----------------"
   END IF
 
   PRINT *, "------Generating lithium cations-------------------"     
-  CALL CREATE_LITHIUM_CATIONS(k)
+  CALL CREATE_LITHIUM_CATIONS(i,k)
   PRINT *, "------Generated lithium cations--------------------"     
 
   IF (unwrapped .EQV. .false.) THEN
@@ -647,7 +647,7 @@ SUBROUTINE CREATE_ANION_IN_MIXEDCHAIN(i,cgcnt,theta,phi,k,bondtemp&
      rxyz(k+1,1) = rxyz(k,1) + r0init*sin(theta)*cos(phi)
      rxyz(k+1,2) = rxyz(k,2) + r0init*sin(theta)*sin(phi)
      rxyz(k+1,3) = rxyz(k,3) + r0init*cos(theta)
-     CALL ASSIGN_BOND_TOPO(bondtemp,aidvals(k+1,1),aidvals(k,1),100)
+     CALL ASSIGN_BOND_TOPO(bondtemp,aidvals(k+1,1),aidvals(k,1),180)
      
   ELSEIF(aidvals(k,3) == 1) THEN ! Wrong choice
      
@@ -659,7 +659,7 @@ SUBROUTINE CREATE_ANION_IN_MIXEDCHAIN(i,cgcnt,theta,phi,k,bondtemp&
      rxyz(k+1,2) = rxyz(k+1-CG_per_mon,2) + r0init*sin(theta)*sin(phi)
      rxyz(k+1,3) = rxyz(k+1-CG_per_mon,3) + r0init*cos(theta)
      CALL ASSIGN_BOND_TOPO(bondtemp,aidvals(k+1,1),aidvals(k+1&
-          &-CG_per_mon,1),100)
+          &-CG_per_mon,1),180)
      
   END IF
      
@@ -730,12 +730,12 @@ SUBROUTINE CREATE_PURE_VEC_CHAINS(i,cgcnt,theta,phi,k,bondtemp)
      rxyz(k,2) = rxyz(k-CG_per_mon,2) + r0init*sin(theta)*sin(phi)
      rxyz(k,3) = rxyz(k-CG_per_mon,3) + r0init*cos(theta)
      CALL ASSIGN_BOND_TOPO(bondtemp,aidvals(k-CG_per_mon,1),aidvals(k&
-          &,1),200)
+          &,1),220)
   ELSE !poly_mon_k - poly_mon_k (blob-blob connection)
      rxyz(k,1) = rxyz(k-1,1) + r0init*sin(theta)*cos(phi)
      rxyz(k,2) = rxyz(k-1,2) + r0init*sin(theta)*sin(phi)
      rxyz(k,3) = rxyz(k-1,3) + r0init*cos(theta)
-     CALL ASSIGN_BOND_TOPO(bondtemp,aidvals(k-1,1),aidvals(k,1),200)
+     CALL ASSIGN_BOND_TOPO(bondtemp,aidvals(k-1,1),aidvals(k,1),220)
   END IF
 
 END SUBROUTINE CREATE_PURE_VEC_CHAINS
@@ -769,6 +769,8 @@ SUBROUTINE CREATE_PURE_POLY_ANIONS(i,cgcnt,k,bondtemp)
 
      DO dum_id = 2,ideal_an_per_ch
         k = k + 1
+        bondtemp     = bondtemp + 1
+        
         aidvals(k,1) = k
         aidvals(k,2) = polyan_id
         aidvals(k,3) = cgcnt
@@ -778,8 +780,8 @@ SUBROUTINE CREATE_PURE_POLY_ANIONS(i,cgcnt,k,bondtemp)
         rxyz(k,2) = rxyz(k-1,2) + r0init*sin(theta)*sin(phi)
         rxyz(k,3) = rxyz(k-1,3) + r0init*cos(theta)
         CALL ASSIGN_BOND_TOPO(bondtemp,aidvals(k-1,1),aidvals(k,1)&
-             &,200)
-
+             &,240)
+        
      END DO
 
   END DO
@@ -822,7 +824,7 @@ SUBROUTINE CREATE_UNPOLYMERIZED_VEC_MONOMERS(i,cgcnt,k,bondtemp&
 
         k = k + 1
         bondtemp  = bondtemp + 1
-        
+
         theta     = math_pi*RAN1(X)
         phi       = 2*math_pi*RAN1(X)
         rxyz(k,1) = rxyz(k-1,1) + r0init*sin(theta)*cos(phi)
@@ -848,11 +850,12 @@ END SUBROUTINE CREATE_UNPOLYMERIZED_VEC_MONOMERS
 !--------------------------------------------------------------------
 
 ! Create lithium cations
-SUBROUTINE CREATE_LITHIUM_CATIONS(k)
+SUBROUTINE CREATE_LITHIUM_CATIONS(i,k)
 
   USE PARAMS
   IMPLICIT NONE
 
+  INTEGER, INTENT(IN) :: i
   INTEGER, INTENT(INOUT) :: k
   INTEGER :: li_id
   
@@ -861,8 +864,8 @@ SUBROUTINE CREATE_LITHIUM_CATIONS(k)
      rxyz(li_id,1) = RAN1(X)*boxl_x
      rxyz(li_id,2) = RAN1(X)*boxl_y
      rxyz(li_id,3) = RAN1(X)*boxl_z
-     aidvals(li_id,1) = k+1
-     aidvals(li_id,2) = N_poly + T_unpoly_VEC + 1
+     aidvals(li_id,1) = li_id
+     aidvals(li_id,2) = i
      aidvals(li_id,3) = CG_per_mon*(1 + CEILING(frac_unpoly)) + 2
      charge(li_id)    = 1.0
         
@@ -883,8 +886,8 @@ SUBROUTINE ASSIGN_BOND_TOPO(bid,aid1,aid2,iderr)
   atype1 = aidvals(aid1,3)
   atype2 = aidvals(aid2,3)
 
-  IF (aidvals(aid1,2) .LE. N_poly) THEN !Polymerized molecules
-
+  IF (atype1 .LE. CG_per_mon+1 .AND. atype2 .LE. 3) THEN 
+     !Polymerized molecules
      IF (atype1 == atype2) THEN
 
         IF (atype1 == 1) THEN
@@ -908,16 +911,23 @@ SUBROUTINE ASSIGN_BOND_TOPO(bid,aid1,aid2,iderr)
      ELSE
 
         PRINT *, "Bond error ", bid, aid1, aid2,atype1,atype2,iderr
-
+        STOP
      END IF
 
-  ELSE !Unpolymerized VEC molecules
+  ELSE IF (atype1 .GT. CG_per_mon+1 .AND. atype2 .GT. 3) THEN
+     !Unpolymerized VEC molecules
 
      ! Accounts for anion-anion bonding not formed
      btype = min(atype1,atype2) + btype_poly_VEC - (CG_per_mon + 1)
 
+  ELSE
+
+     PRINT *, "Unidentified bond ", bid, aid1, aid2,atype1,atype2&
+          &,iderr
+     STOP
   END IF
 
+  
   topo_bond(bid,1) = bid
   topo_bond(bid,2) = btype
   topo_bond(bid,3) = aid1
