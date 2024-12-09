@@ -89,7 +89,8 @@ MODULE PARAMS
   INTEGER, PARAMETER :: numdihdtypes = 0
   INTEGER, PARAMETER :: outfile  = 17
   INTEGER, PARAMETER :: nbonds = N_poly*(blob_per_ch-1) +&
-       & T_unpoly_VEC*(CG_per_mon-1)
+       & T_unpoly_VEC*(CG_per_mon-1)  + is_ion_sep*N_poly&
+       &*(ideal_an_per_ch-1)
   INTEGER, PARAMETER :: nangls = 0
   INTEGER, PARAMETER :: ndihds = 0
 
