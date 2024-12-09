@@ -62,7 +62,8 @@ def check_pdi_files(destdir,pdi_files,flagcheck):
 
 def create_paramfyl_for_datafyl(destdir,inpfyle,nchains,mw_chain\
                                 ,casenum,fr_an,dens=0.85,cg_per_mon=2,\
-                                blob_charge = 0.25,unpoly_frac=0.5):
+                                blob_charge = 0.25,unpoly_frac=0.5,\
+                                is_anion_sep = 0):
 
 
     lmpinp = "lmpinp_" + str(mw_chain)+"_" + str("{:.2f}".format(fr_an)) + "_" +str(casenum)+".f90"
@@ -79,6 +80,7 @@ def create_paramfyl_for_datafyl(destdir,inpfyle,nchains,mw_chain\
           replace("py_unpoly_frac",str(unpoly_frac)).\
           replace("py_chargblob",str(blob_charge)).\
           replace("py_cgpermon",str(cg_per_mon)).\
+          replace("py_isionsep",str(is_anion_sep)).\
           replace("py_density",str(dens))
 
     fw.write(fid)
