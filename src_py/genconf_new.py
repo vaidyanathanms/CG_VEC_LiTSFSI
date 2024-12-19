@@ -71,10 +71,15 @@ coulcut_list = [i*coul_cutoff for  i in coulcut_rat] # coul-cut values
 #---------input details - Bond Coeff--------------------------------
 gen_bond_lst = 1 # Generate bond list
 bname_list   = ['VEC-VEC (no C=O) [1-1]',' VEC - C=O [1-2]', \
-                'VEC - STFSI [1-3]' , 'STFSI - STFSI [3-3]'] #Name of groups
-kspr_list    = [30, 50, 30, 30] # spring constants
-bcon_list    = [[1,1],[1,2],[1,3],[3,3]] # connectivity list
+                'STFSI - STFSI [3-3]'] #Name of groups
+kspr_list    = [30, 50, 30] # spring constants
+bcon_list    = [[1,1],[1,2],[3,3]] # connectivity list
 
+if not is_anion_sep: # anion is on polymer backbone
+    bname_list.append('VEC - STFSI [1-3]')
+    kspr_list.append(30)
+    bcon_list.append([1,3])
+    
 if max(unpoly_farr) > 0: # unpolymerized VEC
     ntypes = 6
     bname_list.append('unpoly_VEC: VEC - unpoly_VEC: C=O [4-5]')
