@@ -26,14 +26,14 @@ from my_python_functions import clean_backup_initfiles
 
 #---------input flags------------------------------------------
 #0-initial run  1- production
-restart   = 1  # For restarting from given configurations
+restart   = 0  # For restarting from given configurations
 num_hrs   = 47 # Total number of hours for run
 num_nodes = 6  # Number of nodes
 num_cores = 36 # Number of cores per node
 hpc_sys   = 'cades'  # Opt: kestrel, cades
 
 #---------input details - Topology--------------------------------
-frac_anions  = [1/10,1/15,1/20]#, 1/10, 1/5] # fraction of anions
+frac_anions  = [1/10]#,1/15,1/20]#, 1/10, 1/5] # fraction of anions
 tot_mons     = 4000 # total number of MONOMERS in the poly CHAIN
 chain_mw     = [40,60] # of monomer range per chain
 num_chains   = [int(tot_mons/x) for x in chain_mw] # of polymerized ch
@@ -41,7 +41,7 @@ unpoly_farr  = [0.6] # fraction of unpolymerized mons
 density      = 0.8 # system density
 cg_per_mon   = 2 # number of blobs per polymer monomer
 blob_charge  = 0.2 # charge per blob
-is_anion_sep = 0 # 0 - anions with VECs, 1 - separate polyanion
+is_anion_sep = 1 # 0 - anions with VECs, 1 - separate polyanion
 nrepeats     = 1 # number of replica
 
 #---------input details - Pair Coeff--------------------------------
@@ -74,6 +74,7 @@ bname_list   = ['VEC-VEC (no C=O) [1-1]',' VEC - C=O [1-2]', \
                 'VEC - STFSI [1-3]' , 'STFSI - STFSI [3-3]'] #Name of groups
 kspr_list    = [30, 50, 30, 30] # spring constants
 bcon_list    = [[1,1],[1,2],[1,3],[3,3]] # connectivity list
+
 
 if max(unpoly_farr) > 0: # unpolymerized VEC
     ntypes = 6
@@ -187,7 +188,7 @@ for mw_ch in range(len(chain_mw)):
                 lmp_par,lmp_data_fyle = create_paramfyl_for_datafyl(destdir,'lmp_params_var.f90',num_chains[mw_ch],\
                                                                     chain_mw[mw_ch],casenum,\
                                                                     round(frac_anions[fr_an],2),density,\
-                                                                    cg_per_mon,blob_charge,unpoly_frac=unpoly_frac,\
+                                                                    cg_per_mon,blob_charge,unpoly_frac,\
                                                                     is_anion_sep)
 
                 compile_and_run_inpgenfyles(lmp_par,destdir,f90_comp=f90_comp)            
