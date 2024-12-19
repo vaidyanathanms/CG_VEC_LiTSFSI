@@ -33,15 +33,15 @@ num_cores = 36 # Number of cores per node
 hpc_sys   = 'cades'  # Opt: kestrel, cades
 
 #---------input details - Topology--------------------------------
-frac_anions  = [1/10,1/15,1/20]#, 1/10, 1/5] # fraction of anions
+frac_anions  = [1/10,1/15,1/20,1/5]#, 1/10, 1/5] # fraction of anions
 tot_mons     = 4000 # total number of MONOMERS in the poly CHAIN
-chain_mw     = [40,60] # of monomer range per chain
+chain_mw     = [40] # of monomer range per chain
 num_chains   = [int(tot_mons/x) for x in chain_mw] # of polymerized ch
 unpoly_farr  = [0.6] # fraction of unpolymerized mons
 density      = 0.8 # system density
 cg_per_mon   = 2 # number of blobs per polymer monomer
 blob_charge  = 0.2 # charge per blob
-is_anion_sep = 0 # 0 - anions with VECs, 1 - separate polyanion
+is_anion_sep = 1 # 0 - anions with VECs, 1 - separate polyanion
 nrepeats     = 1 # number of replica
 
 #---------input details - Pair Coeff--------------------------------
@@ -107,10 +107,11 @@ src_f90    = home_path + '/all_codes/files_CG-SIC/src_f90' #f90 dir
 src_lmp    = home_path + '/all_codes/files_CG-SIC/src_lmp' #lmp dir
 src_tcl    = home_path + '/all_codes/files_CG-SIC/src_tcl' #tcl dir
 scratchdir = scr_path  + '/cg_sic' #output headdir
+# head dir scratch'
 if is_anion_sep:
-    scr_head   = 'sic_mixedvec_free_listsfi_' + str(blob_charge) # head dir scratch'
+    scr_head   = 'sic_mixedvec_free_listsfi_' + str(blob_charge) 
 else:
-    scr_head   = 'sic_mixedvec_listsfi_' + str(blob_charge) # head dir scratch'
+    scr_head   = 'sic_mixedvec_listsfi_' + str(blob_charge) 
 
 #--------lammps executable-------------------------------------
 if hpc_sys == 'kestrel':
@@ -129,6 +130,11 @@ if not os.path.isdir(scratchdir):
     os.mkdir(scratchdir)
 
 #---------main analysis---------------------------------------
+for unpoly_frac in unpoly_farr:
+    scr_head = scr_head + '/unpolyVEC_' + str(round(unpoly_frac,2))
+    if not os.path.isdir(scr_head):
+            os.mkdir(workdir_super)
+    
 for mw_ch in range(len(chain_mw)):
     
     print( "MW/number of Chains: ", chain_mw[mw_ch],num_chains[mw_ch])
@@ -138,12 +144,12 @@ for mw_ch in range(len(chain_mw)):
         os.mkdir(workdir1)
 
     workdir2 = workdir1 + '/MW_' + str(chain_mw[mw_ch])
-	
+    
     if not os.path.isdir(workdir2):
         os.mkdir(workdir2)
         
     for fr_an in range(len(frac_anions)):
-             
+        
         workdir_super = workdir2 + '/fanion_' + str(round(frac_anions[fr_an],2))
 
         if not os.path.isdir(workdir_super):
@@ -268,4 +274,4 @@ for mw_ch in range(len(chain_mw)):
                            'jobmain_long_var.sh','jobmain_long.sh',num_hrs,num_nodes,num_cores)
 
                 os.chdir(maindir)
-	 
+	        
