@@ -7,5 +7,5 @@ src_f90/basic_dynamicsv3.f90
 src_lmp/*~
 src_f90/charge.txt
 src_py/__pycache__/
-src_sh/jobmain*
+src_lmp/jobmain*
 
