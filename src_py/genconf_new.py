@@ -30,14 +30,14 @@ num_hrs   = 47 # Total number of hours for run
 num_nodes = 6  # Number of nodes
 num_cores = 36 # Number of cores per node
 hpc_sys   = 'cades'  # Opt: kestrel, cades
-sys_type  = 'S2' # S1; S2; S3; S4
+sys_type  = 'S1' # S1; S2; S3; S4
 
 #---------input details - Topology--------------------------------
 frac_anions  = [1/20,1/15,1/5]#,1/15,1/20]#, 1/10, 1/5] # fraction of anions
 tot_mons     = 4000 # total number of MONOMERS in the poly CHAIN
 chain_mw     = [40] # of monomer range per chain
 num_chains   = [int(tot_mons/x) for x in chain_mw] # of polymerized ch
-unpoly_farr  = [0.6] # fraction of unpolymerized mons
+unpoly_farr  = [0.0] # fraction of unpolymerized mons
 density      = 0.8 # system density
 cg_per_mon   = 2 # number of blobs per polymer monomer
 blob_charge  = 0.2 # charge per blob
