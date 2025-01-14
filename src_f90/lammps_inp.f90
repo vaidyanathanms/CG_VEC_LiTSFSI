@@ -121,9 +121,12 @@ SUBROUTINE LMP_COORD()
   IF(frac_unpoly .NE. 0.0) THEN
      WRITE(10,'(I0,1X,F14.8)') 4, 12.4 ! unpolymerized VEC w/o C=O 
      WRITE(10,'(I0,1X,F14.8)') 5, 4.0  ! C=O of unpolymerized VEC
+     WRITE(10,'(I0,1X,F14.8)') 6, 1.0  ! Li
+  ELSE
+     WRITE(10,'(I0,1X,F14.8)') 4, 1.0  ! Li
   END IF
 
-  WRITE(10,'(I0,1X,F14.8)') 6, 1.0  ! Li
+
 
   ! Writing atomic coordinates
   
