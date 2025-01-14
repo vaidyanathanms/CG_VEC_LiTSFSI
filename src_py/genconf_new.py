@@ -82,7 +82,6 @@ bname_list   = ['VEC-VEC (no C=O) [1-1]',' VEC - C=O [1-2]', \
 kspr_list    = [30, 50, 30, 30] # spring constants
 bcon_list    = [[1,1],[1,2],[1,3],[3,3]] # connectivity list
 
-
 if max(unpoly_farr) > 0: # unpolymerized VEC
     ntypes = 6
     bname_list.append('unpoly_VEC: VEC - unpoly_VEC: C=O [4-5]')
@@ -129,6 +128,11 @@ if not os.path.isdir(scratchdir):
     os.mkdir(scratchdir)
 
 #---------main analysis---------------------------------------
+for unpoly_frac in unpoly_farr:
+    scr_head = scr_head + '/unpolyVEC_' + str(round(unpoly_frac,2))
+    if not os.path.isdir(scr_head):
+            os.mkdir(workdir_super)
+    
 for mw_ch in range(len(chain_mw)):
     
     print( "MW/number of Chains: ", chain_mw[mw_ch],num_chains[mw_ch])
@@ -138,12 +142,12 @@ for mw_ch in range(len(chain_mw)):
         os.mkdir(workdir1)
 
     workdir2 = workdir1 + '/MW_' + str(chain_mw[mw_ch])
-	
+    
     if not os.path.isdir(workdir2):
         os.mkdir(workdir2)
         
     for fr_an in range(len(frac_anions)):
-             
+        
         workdir_super = workdir2 + '/fanion_' + str(round(frac_anions[fr_an],2))
 
         if not os.path.isdir(workdir_super):
@@ -268,4 +272,4 @@ for mw_ch in range(len(chain_mw)):
                            'jobmain_long_var.sh','jobmain_long.sh',num_hrs,num_nodes,num_cores)
 
                 os.chdir(maindir)
-	 
+	        
