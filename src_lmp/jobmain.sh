@@ -1,32 +1,37 @@
 #!/bin/bash
 
-#SBATCH -A chem
-#SBATCH -p burst
-#SBATCH -t 08:30:00
-#SBATCH -N 1
-#SBATCH -n 32
-#SBATCH --mem=2G
-#SBATCH -J test_CG_VEC
-#SBATCH -o out.%J
-#SBATCH -e err.%J
 
+#SBATCH --job-name si40_0.05_1
+#SBATCH --nodes=6
+#SBATCH --ntasks-per-node=36
+#SBATCH --time=47:30:00
+#SBATCH --account=iontransport
+#SBATCH --error=std.err_%j
+#SBATCH --output=std.out_%j
+#SBATCH --partition shared
 
-module load PE-gnu
+# Load LAMMPS module
+module purge
+module use /nopt/nrel/apps/modules/centos77/modulefiles/
+module load mpich
+module load intel
+module load lammps
+module load lammps
 
+# Change directory and signal job start
+cd $SLURM_SUBMIT_DIR
 echo "begin job.."
 echo $PWD
 
+# Create output directories
 mkdir -p outdir
 mkdir -p trajfiles
 
-mpirun -np 32 ./lmp_mpi -in in.init -e screen
+# Run jobs
+srun -n 216 lmp -in in.init -e screen
 wait
-mpirun -np 32 ./lmp_mpi -in in.nve -e screen
+srun -n 216 lmp -in in.nve -e screen
 wait
-mpirun -np 32 ./lmp_mpi -in in.nvt -e screen
+srun -n 216 lmp -in in.nvt -e screen
 wait
-mpirun -np 32 ./lmp_mpi -in in.npt -e screen
-wait
-mpirun -np 32 ./lmp_mpi -in in.rg -e screen
-wait
-mpirun -np 32 ./lmp_mpi -in in.rdf -e screen
+srun -n 216 lmp -in in.nvt_main -e screen

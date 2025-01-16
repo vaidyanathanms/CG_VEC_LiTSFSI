@@ -1,14 +1,13 @@
 #!/bin/bash
 
-#SBATCH -A chem
-#SBATCH -p burst
-#SBATCH --time=py_tottime:30:00
+#SBATCH --job-name py_jobname
 #SBATCH --nodes=py_nnodes
-#SBATCH --ntasks-per-node=py_ncores
-#SBATCH --mem=24G
-#SBATCH -J py_jobname
-#SBATCH -o allresults/out.%J
-#SBATCH -e allresults/err.%J
+#SBATCH --cpus-per-task=py_ncores
+#SBATCH --time=py_tottime:30:00
+#SBATCH --account=iontransport
+#SBATCH --error=std.err_%j
+#SBATCH --output=std.out_%j
+#SBATCH --partition shared
 
 echo "begin job.."
 echo $PWD
