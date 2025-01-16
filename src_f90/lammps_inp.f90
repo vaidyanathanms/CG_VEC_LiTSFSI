@@ -58,19 +58,15 @@ SUBROUTINE LMP_COORD()
 
   IF(is_ion_sep == 0) THEN
      IF(frac_unpoly == 0) THEN 
-        WRITE (10,*) "Data for CG p(mVEC-r-nLiMTSFI) simulations w/o u&
-             &npolymerized VEC monomers and no free anions"
+        WRITE (10,*) "Data w/o unpoly VEC and w/o free anions"
      ELSE
-        WRITE (10,*) "Data for CG p(mVEC-r-nLiMTSFI) simulations with unp&
-             &olymerized VEC monomers and no free anions"
+        WRITE (10,*) "Data w unpoly VEC and w/o free anions"
      END IF
   ELSE
      IF(frac_unpoly == 0) THEN 
-        WRITE (10,*) "Data for CG p(mVEC-r-nLiMTSFI) simulations w/o u&
-             &npolymerized VEC monomers and with free anions"
+        WRITE (10,*) "Data w/o unpoly VEC and w free anions"
      ELSE
-        WRITE (10,*) "Data for CG p(mVEC-r-nLiMTSFI) simulations with unp&
-             &olymerized VEC monomers and with free anions"
+        WRITE (10,*) "Data w unpoly VEC and w free anions"
      END IF
   END IF
 
