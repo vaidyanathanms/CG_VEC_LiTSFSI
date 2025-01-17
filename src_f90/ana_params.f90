@@ -14,7 +14,7 @@ MODULE ANALYZE_PARAMS
   INTEGER :: nchains, atperchain
   INTEGER :: nproc
 
-  !Structural analysis input details
+  !Structural analysis averages/counters/inputs
   INTEGER :: rdffreq,rmaxbin,npairs
   INTEGER :: rgfreq, rdfpaircnt
   REAL    :: rvolavg,rdomcut,rbinval,rvolval
@@ -25,20 +25,24 @@ MODULE ANALYZE_PARAMS
   INTEGER :: ioncnt,  iontype
   INTEGER :: c_ioncnt, c_iontype
   INTEGER :: p_ioncnt, p_iontype
+  INTEGER :: maxneighsize, neighfreq
+  REAL    :: rneigh_cut
 
   ! All analysis flags
   INTEGER :: polyflag
   INTEGER :: rdfcalc, rgcalc, rgall, rgavg
   INTEGER :: ion_dynflag, cion_dynflag, pion_dynflag
   INTEGER :: ion_diff, cion_diff, pion_diff
+  INTEGER :: catan_neighcalc
 
   ! File names and unit numbers
   CHARACTER(LEN = 256) :: ana_fname,data_fname,traj_fname,log_fname
   CHARACTER(LEN = 256) :: rdf_fname, dum_fname
   INTEGER, PARAMETER :: anaread = 2,   logout = 3
-  INTEGER, PARAMETER :: inpread = 100, rgwrite = 400,rgavgwrite = 300
-  INTEGER, PARAMETER :: dumwrite = 200, rgswrite = 250,adswrite=360
-  
+  INTEGER, PARAMETER :: dumwrite = 50
+  INTEGER, PARAMETER :: inpread = 100, rgwrite = 200,rgavgwrite = 300
+  INTEGER, PARAMETER :: catanwrite = 420
+
   !Math Constants
   REAL*8, PARAMETER :: pival  = 3.14159265359
   REAL*8, PARAMETER :: pi2val = 2.0*pival
@@ -64,14 +68,14 @@ MODULE ANALYZE_PARAMS
   !General required arrays required for computing properties
   INTEGER,ALLOCATABLE,DIMENSION(:)   :: polytyp_arr
   INTEGER,ALLOCATABLE,DIMENSION(:,:) :: ionarray,counterarray
-  INTEGER,ALLOCATABLE,DIMENSION(:,:) :: polymerarray
+  INTEGER,ALLOCATABLE,DIMENSION(:,:) :: polyionarray
 
   !Required Arrays - Structural Quantities
   REAL,ALLOCATABLE,DIMENSION(:,:):: rdfarray, densarray, grparray
   INTEGER,ALLOCATABLE,DIMENSION(:,:):: pairs_rdf
+  REAL, ALLOCATABLE, DIMENSION(:) :: cat_an_neighavg,an_cat_neighavg
 
   !Required Arrays - Dynamic Quantities
-  REAL, ALLOCATABLE, DIMENSION(:) :: diftyp_arr
   REAL*8, ALLOCATABLE, DIMENSION(:,:) :: trx_lmp,try_lmp,trz_lmp
   REAL*8, ALLOCATABLE, DIMENSION(:,:) :: itrx_lmp,itry_lmp,itrz_lmp
   REAL*8, ALLOCATABLE, DIMENSION(:,:) :: ctrx_lmp,ctry_lmp,ctrz_lmp
