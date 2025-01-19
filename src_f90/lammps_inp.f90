@@ -58,15 +58,15 @@ SUBROUTINE LMP_COORD()
 
   IF(is_ion_sep == 0) THEN
      IF(frac_unpoly == 0) THEN 
-        WRITE (10,*) "Data w/o unpoly VEC and no free anions"
+        WRITE (10,*) "Data w/o unpoly VEC and w/o free anions"
      ELSE
-        WRITE (10,*) "Data w unpoly VEC and no free anions"
+        WRITE (10,*) "Data w unpoly VEC and w/o free anions"
      END IF
   ELSE
      IF(frac_unpoly == 0) THEN 
-        WRITE (10,*) "Data w/o unpoly VEC and free anions"
+        WRITE (10,*) "Data w/o unpoly VEC and w free anions"
      ELSE
-        WRITE (10,*) "Data w unpoly VEC and with free anions"
+        WRITE (10,*) "Data w unpoly VEC and w free anions"
      END IF
   END IF
 

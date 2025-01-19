@@ -91,7 +91,7 @@ SUBROUTINE READ_ANA_IP_FILE()
 
         READ(anaread,*,iostat=ierr) nchains
 
-     ELSEIF(dumchar == 'poly_types') THEN
+     ELSEIF(dumchar == 'poly_types') THEN ! For Rg
 
         READ(anaread,*,iostat=ierr) npoly_types
 
@@ -101,20 +101,28 @@ SUBROUTINE READ_ANA_IP_FILE()
         READ(anaread,*,iostat=ierr) (polytyp_arr(i),i=1,npoly_types)
         polyflag = 1
 
-     ELSEIF(dumchar == 'iondiff') THEN
+     ELSEIF(dumchar == 'ion_type') THEN
         
         READ(anaread,*,iostat=ierr) iontype
-        ion_dynflag = 1; ion_diff = 1
         
-     ELSEIF(dumchar == 'cntriondiff') THEN
+     ELSEIF(dumchar == 'cion_type') THEN
 
         READ(anaread,*,iostat=ierr) c_iontype
-        cion_dynflag = 1; cion_diff = 1
 
-     ELSEIF(dumchar == 'polyiondiff') THEN
+     ELSEIF(dumchar == 'iondiff') THEN
+
+        READ(anaread,*,iostat=ierr) ion_diff
+        ion_dynflag = 1
+
+     ELSEIF(dumchar == 'ciondiff') THEN
+
+        READ(anaread,*,iostat=ierr) cion_diff
+        cion_dynflag = 1
+
+     ELSEIF(dumchar == 'piondiff') THEN !stored in polyionarray
 
         READ(anaread,*,iostat=ierr) p_iontype
-        pion_dynflag = 1; pion_diff = 1
+        pion_dynflag = 1
 
      ELSEIF(dumchar == 'compute_rdf') THEN
 
@@ -134,6 +142,10 @@ SUBROUTINE READ_ANA_IP_FILE()
 
         rgcalc = 1
         READ(anaread,*,iostat=ierr) rgfreq,rgall,rgavg
+
+     ELSEIF(dumchar == 'catanneigh') THEN
+        
+        READ(anaread,*,iostat=ierr) neighfreq,maxneighsize,rneigh_cut
 
      ELSEIF(dumchar == 'log_file') THEN
 
@@ -155,6 +167,8 @@ SUBROUTINE READ_ANA_IP_FILE()
 
   PRINT *, "Analysis input file read finished .."
 
+  CALL SANITY_CHECK_IONTYPES()
+
 END SUBROUTINE READ_ANA_IP_FILE
 
 !--------------------------------------------------------------------
@@ -174,6 +188,9 @@ SUBROUTINE DEFAULTVALUES()
   ion_dynflag = 0; cion_dynflag = 0; pion_dynflag = 0
   ion_diff = 0; cion_diff = 0; pion_diff = 0
 
+  ! Initialize iontypes
+  c_iontype = -1; p_iontype = -1; iontype = -1
+
   !Initialize system quantities
   npoly_types = 0; ioncnt = 0; c_ioncnt = 0; p_ioncnt= 0
 
@@ -187,6 +204,50 @@ SUBROUTINE DEFAULTVALUES()
   rvolavg = 0; rgavg = 0
 
 END SUBROUTINE DEFAULTVALUES
+
+!--------------------------------------------------------------------
+
+SUBROUTINE SANITY_CHECK_IONTYPES()
+
+  USE ANALYZE_PARAMS
+
+  IMPLICIT NONE
+
+  IF(ion_dynflag .OR. catan_neighcalc) THEN
+
+     IF(iontype == -1) THEN
+        
+        PRINT *, "ion type undefined for neigh or diff calculation"
+        STOP 
+
+     END IF
+
+  END IF
+
+  IF(cion_dynflag .OR. catan_neighcalc) THEN
+
+     IF(c_iontype == -1) THEN
+        
+        PRINT *, "counter-ion type undefined for neigh or diff calculation"
+        STOP 
+
+     END IF
+
+  END IF
+
+  IF(pion_dynflag) THEN
+
+     IF(p_iontype == -1) THEN
+        
+        PRINT *, "polymer-ion type undefined for diff calculation"
+        STOP 
+
+     END IF
+
+  END IF
+
+
+END SUBROUTINE SANITY_CHECK_IONTYPES
 
 !--------------------------------------------------------------------
 
@@ -533,10 +594,6 @@ SUBROUTINE ANALYZE_TRAJECTORYFILE()
 
         END IF
 
-     END DO
-
-     DO j = 1,atchk
-
         ! Store to time-dependent array before subtracting xlo/ylo/zlo
         ! or else it will induce an error
         IF(ion_dynflag == 1 .AND. atype == iontype) THEN
@@ -610,6 +667,9 @@ SUBROUTINE OPEN_STRUCT_OUTPUT_FILES()
         dum_fname = "rgavg_"//trim(adjustl(traj_fname))
         OPEN(unit = rgavgwrite,file =trim(dum_fname),action="write"&
              &,status="replace")
+        WRITE(rgavgwrite,'(A5,1X,4(A3,1X))') "tstep", "rgt","rgx","&
+             &rgy","rgz"
+
      END IF
 
      IF(rgall) THEN
@@ -620,6 +680,7 @@ SUBROUTINE OPEN_STRUCT_OUTPUT_FILES()
  
   END IF
 
+   
 END SUBROUTINE OPEN_STRUCT_OUTPUT_FILES
 
 !--------------------------------------------------------------------
@@ -670,11 +731,151 @@ SUBROUTINE STRUCT_MAIN(tval)
   IMPLICIT NONE
 
   INTEGER, INTENT(IN):: tval
+  INTEGER :: t1, t2
+  INTEGER :: clock_rate, clock_max
 
   IF(rgcalc .AND. mod(tval-1,rgfreq)==0) CALL COMPUTE_RADGYR(tval)
   IF(rdfcalc .AND. mod(tval-1,rdffreq)==0) CALL COMPUTE_RDF(tval)
 
+  IF(catan_neighcalc) THEN
+     
+     IF(tval == 1) THEN
+
+        cat_an_neighavg = 0.0; an_cat_neighavg=0.0
+        CALL SYSTEM_CLOCK(t1,clock_rate,clock_max)
+        CALL CAT_AN_NEIGHS()
+        CALL SYSTEM_CLOCK(t2,clock_rate,clock_max)
+        PRINT *, 'Elapsed real time for LiP-Neight Analysis= ',REAL(t2&
+             &-t1)/REAL(clock_rate)
+
+     END IF
+     
+     IF(mod(tval,neighfreq) == 0) CALL CAT_AN_NEIGHS()
+     
+  END IF
+
+
 END SUBROUTINE STRUCT_MAIN
+
+!--------------------------------------------------------------------
+
+SUBROUTINE CAT_AN_NEIGHS()
+
+  USE ANALYZE_PARAMS
+
+  IMPLICIT NONE
+
+  INTEGER :: i,j,a1id,a2id,neigh_cnt,tid
+  INTEGER,DIMENSION(1:maxneighsize,0:nproc-1) :: cat_an_neigh_inst&
+       &,an_cat_neigh_inst 
+  REAL :: rxval, ryval, rzval, rval
+
+  cat_an_neigh_inst = 0; an_cat_neigh_inst = 0
+
+!$OMP PARALLEL PRIVATE(i,j,a1id,a2id,rxval,ryval,rzval,rval,neigh_cnt,tid)
+!$OMP DO
+  DO i = 1,ioncnt
+     
+     neigh_cnt = 0
+     a1id = ionarray(i,1)
+     tid = OMP_GET_THREAD_NUM()
+
+     DO j = 1,c_ioncnt
+
+        a2id = counterarray(j,1)
+        
+        rxval = rxyz_lmp(a1id,1) - rxyz_lmp(a2id,1) 
+        ryval = rxyz_lmp(a1id,2) - rxyz_lmp(a2id,2) 
+        rzval = rxyz_lmp(a1id,3) - rxyz_lmp(a2id,3) 
+        
+        rxval = rxval - box_xl*ANINT(rxval/box_xl)
+        ryval = ryval - box_yl*ANINT(ryval/box_yl)
+        rzval = rzval - box_zl*ANINT(rzval/box_zl)
+        
+        rval = sqrt(rxval**2 + ryval**2 + rzval**2)
+        
+        IF(rval .LT. rneigh_cut) THEN
+           
+           neigh_cnt = neigh_cnt + 1
+           
+        END IF
+
+     END DO
+
+     IF(neigh_cnt + 1 .GT. maxneighsize) THEN
+
+        PRINT *, "Neighbor count exceeded max size"
+        PRINT *, neigh_cnt, maxneighsize
+        STOP
+
+     END IF
+
+     cat_an_neigh_inst(neigh_cnt+1,tid) = cat_an_neigh_inst(neigh_cnt&
+          &+1,tid) + 1
+
+  END DO
+!$OMP END DO
+!$OMP END PARALLEL
+
+!$OMP PARALLEL PRIVATE(i,j,a1id,a2id,rxval,ryval,rzval,rval,neigh_cnt,tid)
+!$OMP DO
+  DO i = 1,c_ioncnt
+     
+     neigh_cnt = 0
+     a1id = counterarray(i,1)
+     tid = OMP_GET_THREAD_NUM()
+
+     DO j = 1,ioncnt
+
+        a2id = ionarray(j,1)
+        
+        rxval = rxyz_lmp(a1id,1) - rxyz_lmp(a2id,1) 
+        ryval = rxyz_lmp(a1id,2) - rxyz_lmp(a2id,2) 
+        rzval = rxyz_lmp(a1id,3) - rxyz_lmp(a2id,3) 
+        
+        rxval = rxval - box_xl*ANINT(rxval/box_xl)
+        ryval = ryval - box_yl*ANINT(ryval/box_yl)
+        rzval = rzval - box_zl*ANINT(rzval/box_zl)
+        
+        rval = sqrt(rxval**2 + ryval**2 + rzval**2)
+        
+        IF(rval .LT. rneigh_cut) THEN
+           
+           neigh_cnt = neigh_cnt + 1
+           
+        END IF
+
+     END DO
+
+     IF(neigh_cnt + 1 .GT. maxneighsize) THEN
+
+        PRINT *, "Neighbor count exceeded max size"
+        PRINT *, neigh_cnt, maxneighsize
+        STOP
+
+     END IF
+
+     an_cat_neigh_inst(neigh_cnt+1,tid) = an_cat_neigh_inst(neigh_cnt&
+          &+1,tid) + 1
+
+  END DO
+!$OMP END DO
+
+
+!$OMP DO 
+  DO  i = 1,maxneighsize
+     DO j = 0,nproc-1
+        cat_an_neighavg(i) = cat_an_neighavg(i) + cat_an_neigh_inst(i&
+             &,j)
+        an_cat_neighavg(i) = an_cat_neighavg(i) + an_cat_neigh_inst(i&
+             &,j)
+     END DO
+  END DO
+!$OMP END DO
+
+!$OMP END PARALLEL
+
+END SUBROUTINE CAT_AN_NEIGHS
 
 !--------------------------------------------------------------------
 
@@ -919,7 +1120,8 @@ SUBROUTINE COMPUTE_RADGYR(iframe)
 
   IF(rgall) THEN
      
-     WRITE(rgwrite,'(2(I0,1X))') timestep, nchains
+     WRITE(rgwrite,'(2(I0,1X),4(A3,1X))') timestep, nchains,"rgt","rg&
+          &x","rgy","rgz"
 
      DO i = 1,nchains
      
@@ -941,7 +1143,7 @@ SUBROUTINE ALLOUTPUTS()
   INTEGER :: i
 
   PRINT *, "Number of frames from start to end: ", nframes/(freqfr+1)
-  PRINT *, "Frequency of Frames: ", freqfr
+  PRINT *, "Frequency of Frames: ", freqfr + 1
   PRINT *, "Total number of Frames analyzed: ", nfrcntr
 
   WRITE(logout,*) "Number of frames from start to end: ", nframes&
@@ -952,6 +1154,11 @@ SUBROUTINE ALLOUTPUTS()
   IF(rdfcalc) THEN
      PRINT *, "Writing RDFs .."
      CALL OUTPUT_ALLRDF()
+  END IF
+
+  IF(catan_neighcalc) THEN
+     PRINT *, "Writing neighbors .."
+     CALL OUTPUT_ALLNEIGHBORS()
   END IF
 
 
@@ -1021,6 +1228,61 @@ END SUBROUTINE OUTPUT_ALLRDF
 
 !--------------------------------------------------------------------
 
+SUBROUTINE OUTPUT_ALLNEIGHBORS()
+
+  USE ANALYZE_PARAMS
+
+  IMPLICIT NONE
+
+  INTEGER :: i,frnorm,ierr
+  REAL :: totcat_an_neigh,totan_cat_neigh
+
+  IF(neighfreq == 1) frnorm = nframes
+  IF(neighfreq .NE. 1) frnorm = nframes/neighfreq + 1
+
+  totcat_an_neigh = 0.0; totan_cat_neigh = 0.0
+
+  IF(catan_neighcalc) THEN
+!$OMP PARALLEL DO REDUCTION(+:totcat_an_neigh,totan_cat_neigh) PRIVATE(i)
+  
+     DO i = 1,maxneighsize
+
+        totcat_an_neigh = totcat_an_neigh + REAL(cat_an_neighavg(i))
+        totan_cat_neigh = totan_cat_neigh + REAL(an_cat_neighavg(i))
+
+     END DO
+
+!$OMP END PARALLEL DO
+
+     IF(catan_neighcalc) THEN
+        
+        dum_fname = "catanneigh_"//trim(adjustl(traj_fname))
+        OPEN(unit = dumwrite,file =trim(dum_fname),action="write"&
+             &,status="replace")
+
+        
+     END IF
+
+     
+     DO i = 1,maxneighsize     
+
+        WRITE(dumwrite,'(I0,1X,4(F14.8,1X))') i,&
+             & REAL(cat_an_neighavg(i))/REAL(frnorm),100.0&
+             &*REAL(cat_an_neighavg(i))/totcat_an_neigh&
+             &,REAL(an_cat_neighavg(i))/REAL(frnorm),100.0&
+             &*REAL(an_cat_neighavg(i))/totan_cat_neigh
+
+     END DO
+
+     CLOSE(dumwrite)
+
+  END IF
+
+END SUBROUTINE OUTPUT_ALLNEIGHBORS
+     
+!--------------------------------------------------------------------
+! pion_type is set to -1 in the beginning and is read if and only if
+! pion_dynflag is activated
 SUBROUTINE SORTALLARRAYS()
 
   USE ANALYZE_PARAMS
@@ -1057,32 +1319,16 @@ SUBROUTINE SORTALLARRAYS()
 
   END DO
 
-  IF(ion_dynflag)  PRINT *, "Number of atoms of ion type: ", ioncnt
-  IF(cion_dynflag) PRINT *, "Number of atoms of cntion type: ", c_ioncnt
-  IF(pion_dynflag) PRINT *, "Number of atoms of polyion type: ", p_ioncnt
-
-  ALLOCATE(ionarray(ioncnt,2),stat = AllocateStatus)
-  IF(AllocateStatus/=0) STOP "did not allocate ionarray"
-
-  IF(cion_dynflag) THEN
+  IF(catan_neighcalc .OR. ion_dynflag .OR. cion_dynflag) THEN
+     PRINT *, "Number of atoms of ion type: ", ioncnt
+     PRINT *, "Number of atoms of cntion type: ", c_ioncnt
+     
+     ALLOCATE(ionarray(ioncnt,2),stat = AllocateStatus)
+     IF(AllocateStatus/=0) STOP "did not allocate ionarray"
      ALLOCATE(counterarray(c_ioncnt,2),stat = AllocateStatus)
      IF(AllocateStatus/=0) STOP "did not allocate ionarray"
-  ELSE
-     ALLOCATE(counterarray(1,2), stat = AllocateStatus)
-     DEALLOCATE(counterarray)
-  END IF
-
-  IF(pion_dynflag) THEN
-     ALLOCATE(polymerarray(p_ioncnt,2),stat = AllocateStatus)
-     IF(AllocateStatus/=0) STOP "did not allocate polymerarray"
-  ELSE
-     ALLOCATE(polymerarray(1,2),stat = AllocateStatus)
-     DEALLOCATE(polymerarray)
-  END IF
-
-  ! Load ion array
-
-  IF(ion_dynflag) THEN
+  
+     ! Load ion array
 
      i = 0
 
@@ -1091,58 +1337,52 @@ SUBROUTINE SORTALLARRAYS()
         i = i + 1
         ionarray(i,1) = dumsortarr(i,1)
         ionarray(i,2) = dumsortarr(i,2)
-
+        
      END DO
 
      IF(i .NE. ioncnt) THEN
         PRINT *, i, ioncnt
         STOP "Wrong total count in ionarray"
      END IF
-
-     DO i = 1,ioncnt
-
-        IF(ionarray(i,1) == -1 .OR. ionarray(i,2) == -1) THEN
      
+     DO i = 1,ioncnt
+     
+        IF(ionarray(i,1) == -1 .OR. ionarray(i,2) == -1) THEN
+           
            PRINT *, i,ionarray(i,1), ionarray(i,2)
            PRINT *, "Something wrong in assigning ionarray"
            STOP
-        
+           
         END IF
-
+        
         IF(ionarray(i,2) .NE. iontype) THEN
-     
+           
            PRINT *, i,ionarray(i,1), ionarray(i,2)
            PRINT *, "Something wrong in ionarray type"
            STOP
            
         END IF
-
+        
      END DO
-
-  
+     
+     
      OPEN(unit = 93,file="iontypelist.txt",action="write",status="replace&
           &")
-
+     
      WRITE(93,*) "Reference type/count: ", iontype, ioncnt
      
      DO i = 1,ioncnt
-
         WRITE(93,'(3(I0,1X))') i, ionarray(i,1), ionarray(i,2)
-
      END DO
      
      CLOSE(93)
-
-  END IF
-
-  ! Load counterion array
-
-  IF(cion_dynflag) THEN
-
+     
+     ! Load counterion array
+     
      i = 0
-
+     
      DO WHILE(dumcionarr(i+1,1) .NE. -1) 
-
+        
         i = i + 1
         counterarray(i,1) = dumcionarr(i,1)
         counterarray(i,2) = dumcionarr(i,2)
@@ -1163,10 +1403,10 @@ SUBROUTINE SORTALLARRAYS()
            STOP
            
         END IF
-
+        
         IF(counterarray(i,2) .NE. c_iontype) THEN
            
-           PRINT *, i,ionarray(i,1), ionarray(i,2)
+           PRINT *, i,counterarray(i,1), counterarray(i,2)
            PRINT *, "Something wrong in counterionarray type"
            STOP
            
@@ -1179,30 +1419,42 @@ SUBROUTINE SORTALLARRAYS()
           &ace")
      
      WRITE(93,*) "Reference type/count: ", c_iontype, c_ioncnt
-
+     
      DO i = 1,c_ioncnt
-
-        WRITE(93,'(3(I0,1X))') i, ionarray(i,1), ionarray(i,2)
-
+        
+        WRITE(93,'(3(I0,1X))') i, counterarray(i,1), counterarray(i,2)
+        
      END DO
-  
+     
      CLOSE(93)
+  
+  ELSE
+
+     ALLOCATE(ionarray(1,2),stat = AllocateStatus)
+     DEALLOCATE(ionarray)
+     ALLOCATE(counterarray(1,2),stat = AllocateStatus)
+     DEALLOCATE(counterarray)
 
   END IF
 
 
-  ! Load polymerion array
+  ! Polymerion array required only for diffusion systems
 
-  IF(pion_dynflag) THEN
+  IF (pion_dynflag) THEN
+
+     PRINT *, "Number of atoms of polyion type: ",p_ioncnt
+
+     ALLOCATE(polyionarray(p_ioncnt,2),stat = AllocateStatus)
+     IF(AllocateStatus/=0) STOP "did not allocate polyionarray"
 
      i = 0
 
      DO WHILE(dumpionarr(i+1,1) .NE. -1) 
 
         i = i + 1
-        polymerarray(i,1) = dumpionarr(i,1)
-        polymerarray(i,2) = dumpionarr(i,2)
-        
+        polyionarray(i,1) = dumpionarr(i,1)
+        polyionarray(i,2) = dumpionarr(i,2)
+     
      END DO
      
      IF(i .NE. p_ioncnt) THEN
@@ -1211,41 +1463,46 @@ SUBROUTINE SORTALLARRAYS()
      END IF
      
      DO i = 1,p_ioncnt
-        
-        IF(polymerarray(i,1) == -1 .OR. polymerarray(i,2) == -1) THEN
-           
-           PRINT *, i,polymerarray(i,1), polymerarray(i,2)
-           PRINT *, "Something wrong in assigning polymerarray"
-           STOP
-           
-        END IF
-        
-        IF(polymerarray(i,2) .NE. p_iontype) THEN
-           
-           PRINT *, i,polymerarray(i,1), polymerarray(i,2)
-           PRINT *, "Something wrong in polymerarray type"
-           STOP
-           
-        END IF
-        
-     END DO
      
+        IF(polyionarray(i,1) == -1 .OR. polyionarray(i,2) == -1) THEN
+           
+           PRINT *, i,polyionarray(i,1), polyionarray(i,2)
+           PRINT *, "Something wrong in assigning polyionarray"
+           STOP
+           
+        END IF
+     
+        IF(polyionarray(i,2) .NE. p_iontype) THEN
+        
+           PRINT *, i,polyionarray(i,1), polyionarray(i,2)
+           PRINT *, "Something wrong in polyionarray"
+           STOP
+           
+        END IF
+     
+     END DO
+  
      
      OPEN(unit = 93,file="polyionlist.txt",action="write",status="repl&
           &ace")
-     
-     WRITE(93,*) "Reference type/count: ", iontype, ioncnt
+  
+     WRITE(93,*) "Reference type/count: ", p_iontype, p_ioncnt
      
      DO i = 1,p_ioncnt
         
-        WRITE(93,'(3(I0,1X))') i,polymerarray(i,1), polymerarray(i,2)
+        WRITE(93,'(3(I0,1X))') i,polyionarray(i,1), polyionarray(i,2)
         
      END DO
      
      CLOSE(93)
 
+  ELSE
+
+     ALLOCATE(polyionarray(1,2),stat = AllocateStatus)
+     DEALLOCATE(polyionarray)
+
   END IF
-     
+
 END SUBROUTINE SORTALLARRAYS
 
 !--------------------------------------------------------------------
@@ -1294,7 +1551,7 @@ SUBROUTINE MAP_REFTYPE(jin,atype,jout)
 
      DO i = 1,p_ioncnt
         
-        IF(jin == polymerarray(i,1)) THEN
+        IF(jin == polyionarray(i,1)) THEN
            
            jout = i
 
@@ -1378,6 +1635,7 @@ SUBROUTINE DIFF_IONS()
 
 
   END DO
+!$OMP END PARALLEL DO
 
   DO i = 0, nframes-1
 
@@ -1441,8 +1699,7 @@ SUBROUTINE DIFF_COUNTERIONS()
            gxarr(tinc) = gxarr(tinc) + rxcm**2
            gyarr(tinc) = gyarr(tinc) + rycm**2
            gzarr(tinc) = gzarr(tinc) + rzcm**2
-           
-           
+                      
         END DO
 
      END DO
@@ -1453,6 +1710,7 @@ SUBROUTINE DIFF_COUNTERIONS()
 
      
   END DO
+!$OMP END PARALLEL DO
 
   DO i = 0, nframes-1
 
@@ -1502,8 +1760,6 @@ SUBROUTINE CHECK_MOMENTUM(tval)
      END IF
 
   END IF
-  
-  
 
 END SUBROUTINE CHECK_MOMENTUM
 
@@ -1640,6 +1896,18 @@ SUBROUTINE ALLOCATE_ANALYSIS_ARRAYS()
      DEALLOCATE(ptrx_lmp)
      DEALLOCATE(ptry_lmp)
      DEALLOCATE(ptrz_lmp)
+  END IF
+  
+  IF(catan_neighcalc) THEN
+     ALLOCATE(cat_an_neighavg(1:maxneighsize),stat = AllocateStatus)
+     IF(AllocateStatus/=0) STOP "did not allocate cat_an_neighavg"
+     ALLOCATE(an_cat_neighavg(1:maxneighsize),stat = AllocateStatus)
+     IF(AllocateStatus/=0) STOP "did not allocate an_cat_neighavg"
+  ELSE
+     ALLOCATE(cat_an_neighavg(1),stat = AllocateStatus)
+     ALLOCATE(an_cat_neighavg(1),stat = AllocateStatus)
+     DEALLOCATE(cat_an_neighavg)
+     DEALLOCATE(an_cat_neighavg)
   END IF
 
   PRINT *, "Successfully allocated memory for analyis"
