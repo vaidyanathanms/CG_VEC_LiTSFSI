@@ -159,12 +159,12 @@ def gen_bond_coeff_file(destdir,bname_list,kspr_list,sig_list,bcon_list):
                                                 eqbm_dst,bname_list[bttype]))
 
 
-def run_lammps(mw_chain,fr_anion,casenum,inpjob,outjob,tot_hrs,tot_nodes,tot_cores):
+def run_lammps(sys_type,mw_chain,fr_anion,casenum,inpjob,outjob,tot_hrs,tot_nodes,tot_cores):
 
     if not os.path.exists(inpjob):
         raise RuntimeError('ERROR: ' + inpjob + ' not found')
     
-    jobstr = "si" + str(mw_chain) + "_" + str(fr_anion) + "_" \
+    jobstr = sys_type + "_MW_" + str(mw_chain) + "_" + str(fr_anion) + "_" \
              + str(casenum)
     fr  = open(inpjob,'r')
     fw  = open(outjob,'w')
