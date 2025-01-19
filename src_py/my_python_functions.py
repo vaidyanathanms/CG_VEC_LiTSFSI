@@ -158,6 +158,16 @@ def gen_bond_coeff_file(destdir,bname_list,kspr_list,sig_list,bcon_list):
             fbond.write('%s\t %d %g %g #%s\n' %('bond_coeff', bttype+1,kspr_list[bttype],\
                                                 eqbm_dst,bname_list[bttype]))
 
+def gen_angl_coeff_file(destdir,atyp_list,aname_list,kang_list,thet_list):
+
+    with open(destdir + '/angle_info_file.dat','w') as fangl:
+        fangl.write('# Angle coefficient file\n')
+        fangl.write('# Add after angle_style command in LAMMPS input file\n')
+        for attype in range(len(atyp_list)):
+            fangl.write('%s\t %s %d %g #%s\n' %('angle_coeff',atyp_list[attype],\
+                                             kang_list[attype],\
+                                             thet_list[attype],aname_list[attype]))
+            
 
 def run_lammps(sys_type,mw_chain,fr_anion,casenum,inpjob,outjob,tot_hrs,tot_nodes,tot_cores):
 
