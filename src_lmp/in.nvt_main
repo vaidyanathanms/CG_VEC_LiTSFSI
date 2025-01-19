@@ -73,4 +73,5 @@ run	  30000000 upto
 unfix 1
 write_restart 	restart_NVTmain.dat
 
+write_data   out_NVTmain.data
 

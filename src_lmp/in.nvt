@@ -73,6 +73,7 @@ restart   500000 archival_*.restart
 timestep  0.005
 run       6000000 upto
 write_restart restart_NVT1.dat
+write_data out_NVT1.data
 
 undump    main
 dump      main all custom 2500 config_${ts}.lammpstrj id type xu yu zu
@@ -81,4 +82,5 @@ run	  10000000 upto
 unfix 1
 write_restart 	restart_NVT2.dat
 
+write_data  out_NVT2.data
 
