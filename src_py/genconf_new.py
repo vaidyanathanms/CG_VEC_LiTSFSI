@@ -10,7 +10,6 @@ import sys
 import glob
 from subprocess import call
 
-
 #---------mypython functions------------------------------
 
 from my_python_functions import cpy_main_files
@@ -31,17 +30,26 @@ num_hrs   = 47 # Total number of hours for run
 num_nodes = 6  # Number of nodes
 num_cores = 36 # Number of cores per node
 hpc_sys   = 'cades'  # Opt: kestrel, cades
+sys_type  = 'S1' # S1; S2; S3; S4
 
 #---------input details - Topology--------------------------------
-frac_anions  = [1/20] #[1/5,1/10,1/15]#,1/20]#,1/20,1/10,1/6,1/5,1/3] # fraction of anions
-tot_mons     = 3000 # total number of MONOMERS in the poly CHAIN
-chain_mw     = [40]#,60,90] # of monomer range per chain
+frac_anions  = [1/10]#,1/15,1/5]#,1/15,1/20]#, 1/10, 1/5] # fraction of anions
+tot_mons     = 4000 # total number of MONOMERS in the poly CHAIN
+chain_mw     = [40] # of monomer range per chain
 num_chains   = [int(tot_mons/x) for x in chain_mw] # of polymerized ch
-unpoly_farr  = [0.6] # fraction of unpolymerized mons
+unpoly_farr  = [0.0] # fraction of unpolymerized mons
 density      = 0.8 # system density
 cg_per_mon   = 2 # number of blobs per polymer monomer
-blob_charge  = 0.1 # charge per blob
+blob_charge  = 0.2 # charge per blob
 nrepeats     = 1 # number of replica
+
+if sys_type == 'S3': #1-VEC-anions blend; 0-VEC-anion copolymer
+    is_anion_sep = 1 
+else:
+    is_anion_sep = 0
+    
+if sys_type == 'S1' and max(unpoly_farr) > 0:
+    raise RuntimeError('Cannot have unpolymerized frac for S1')
 
 #---------input details - Pair Coeff--------------------------------
 gen_pair_lst = 1 # Generate pair list
@@ -101,7 +109,7 @@ src_f90    = home_path + '/all_codes/files_CG-SIC/src_f90' #f90 dir
 src_lmp    = home_path + '/all_codes/files_CG-SIC/src_lmp' #lmp dir
 src_tcl    = home_path + '/all_codes/files_CG-SIC/src_tcl' #tcl dir
 scratchdir = scr_path  + '/cg_sic' #output headdir
-scr_head   = 'sic_mixedvec_listsfi' # head dir scratch'
+scr_head   = sys_type + '_sic_mixedvec_listsfi_' + str(blob_charge) # head dir scratch'
 
 #--------lammps executable-------------------------------------
 if hpc_sys == 'kestrel':
@@ -129,12 +137,12 @@ for mw_ch in range(len(chain_mw)):
         os.mkdir(workdir1)
 
     workdir2 = workdir1 + '/MW_' + str(chain_mw[mw_ch])
-	
+    
     if not os.path.isdir(workdir2):
         os.mkdir(workdir2)
         
     for fr_an in range(len(frac_anions)):
-             
+        
         workdir_super = workdir2 + '/fanion_' + str(round(frac_anions[fr_an],2))
 
         if not os.path.isdir(workdir_super):
@@ -183,7 +191,8 @@ for mw_ch in range(len(chain_mw)):
                 lmp_par,lmp_data_fyle = create_paramfyl_for_datafyl(destdir,'lmp_params_var.f90',num_chains[mw_ch],\
                                                                     chain_mw[mw_ch],casenum,\
                                                                     round(frac_anions[fr_an],2),density,\
-                                                                    cg_per_mon,blob_charge,unpoly_frac=unpoly_frac)
+                                                                    cg_per_mon,blob_charge,unpoly_frac,\
+                                                                    is_anion_sep)
 
                 compile_and_run_inpgenfyles(lmp_par,destdir,f90_comp=f90_comp)            
 
@@ -258,4 +267,4 @@ for mw_ch in range(len(chain_mw)):
                            'jobmain_long_var.sh','jobmain_long.sh',num_hrs,num_nodes,num_cores)
 
                 os.chdir(maindir)
-	 
+	        

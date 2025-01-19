@@ -18,17 +18,17 @@ from my_python_functions import run_analysis
 
 #---------input details----------------------------------------
 analyze_only = 'filelist' #latest, all, filename, filelist
-analist      = ['config_13000000.lammpstrj','config_9000000.lammpstrj',\
-                'config_7000000.lammpstrj','config_11500000.lammpstrj']
+analist      = ['config_10000000.lammpstrj']#,'config_10000000.lammpstrj',\
+                #'config_10000000.lammpstrj','config_10000000.lammpstrj']
 frac_anions  = [1/20,1/15,1/10,1/5]#,1/20,1/10,1/6,1/5,1/3] # fraction of anions
-tot_mons     = 6000 # total number of MONOMERS in the poly CHAIN
+tot_mons     = 3000 # total number of MONOMERS in the poly CHAIN
 chain_mw     = [40]#60,40]#,60,90] # of monomer range per chain
 num_chains   = [int(tot_mons/x) for x in chain_mw] # of polymerized ch
 unpoly_farr  = [0.6] # fraction of unpolymerized mons
 nrepeats     = 1 # number of replica
-nframes      = 50 # total frames to be analyzed
-skipfr       = 0 # skip frames
-freqfr       = 2 # freq of anaylsis
+nframes      = 1000 # total frames to be analyzed
+skipfr       = 100 # skip frames
+freqfr       = 1 # freq of anaylsis
 
 #---------job details------------------------------------------
 tottime   = 3 # in hours
