@@ -26,15 +26,15 @@ from my_python_functions import clean_backup_initfiles
 
 #---------input flags------------------------------------------
 #0-initial run  1- production
-restart   = 0  # For restarting from given configurations
+restart   = 1  # For restarting from given configurations
 num_hrs   = 47 # Total number of hours for run
 num_nodes = 6  # Number of nodes
 num_cores = 36 # Number of cores per node
-hpc_sys   = 'kestrel'  # Opt: kestrel, cades
+hpc_sys   = 'cades'  # Opt: kestrel, cades
 sys_type  = 'S3' # S1; S2; S3; S4
 
 #---------input details - Topology--------------------------------
-frac_anions  = [1/20]#,1/11,1/15,1/5,1/20]#,1/15,1/20]#, 1/10, 1/5] # fraction of anions
+frac_anions  = [1/20,1/15,1/11,1/5]#,1/11,1/15,1/5,1/20]#,1/15,1/20]#, 1/10, 1/5] # fraction of anions
 tot_mons     = 4000 # total number of MONOMERS in the poly CHAIN
 chain_mw     = [40] # of monomer range per chain
 num_chains   = [int(tot_mons/x) for x in chain_mw] # of polymerized ch
@@ -42,7 +42,7 @@ unpoly_farr  = [0.6] # fraction of unpolymerized mons
 density      = 0.8 # system density
 cg_per_mon   = 2 # number of blobs per polymer monomer
 blob_charge  = 0.2 # charge per blob
-case_arr     = [2] # case number
+case_arr     = [1] # case number
 
 if sys_type == 'S3': #1-VEC-anions blend; 0-VEC-anion copolymer
     is_anion_sep = 1 
@@ -280,6 +280,8 @@ for mw_ch in range(len(chain_mw)):
                 if gen_bond_lst:
                     gen_bond_coeff_file(destdir,bname_list,kspr_list,sig_list,bcon_list)
 
+                if gen_angl_lst:
+                    gen_angl_coeff_file(destdir,atype_list,aname_list,kang_list,thet_list)
 
                 #----Copy other required files-------------------
                 for fyllist in range(len(lmp_long)):
@@ -292,7 +294,8 @@ for mw_ch in range(len(chain_mw)):
                         desfyl = destdir + '/' + lmp_exe
                         shutil.copy2(srcfyl, desfyl)
 
-                run_lammps(chain_mw[mw_ch],round(frac_anions[fr_an],2),casenum,\
+
+                run_lammps(sys_type,chain_mw[mw_ch],round(frac_anions[fr_an],2),casenum,\
                            'jobmain_long_var.sh','jobmain_long.sh',num_hrs,num_nodes,num_cores)
 
                 os.chdir(maindir)
