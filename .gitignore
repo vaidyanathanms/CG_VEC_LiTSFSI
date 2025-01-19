@@ -8,3 +8,6 @@ src_lmp/*~
 src_f90/charge.txt
 src_py/__pycache__/
 src_lmp/jobmain*
+src_f90/lmp_input.dat
+src_lmp/*.sh
+src_f90/*.log
