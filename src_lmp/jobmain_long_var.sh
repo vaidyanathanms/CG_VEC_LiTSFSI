@@ -2,6 +2,7 @@
 
 #SBATCH --job-name py_jobname
 #SBATCH --nodes=py_nnodes
+#SBATCH --ntasks-per-node=py_ncores
 #SBATCH --time=py_tottime:30:00
 #SBATCH --account=iontransport
 #SBATCH --error=std.err_%j
@@ -13,7 +14,7 @@ module purge
 module use /nopt/nrel/apps/modules/centos77/modulefiles/
 module load mpich
 module load intel
-module load lammps
+module load lammps//062322-intel-mpich
 
 # Change directory and signal job start
 cd $SLURM_SUBMIT_DIR
@@ -24,10 +25,8 @@ echo $PWD
 mkdir -p outdir
 mkdir -p trajfiles
 
-srun -n py_nptot ./lmp_mpi -in in.nvt -e screen
+srun --mpi=pmi2 lmp -in in.init -e screen
 wait
-srun -n py_nptot ./lmp_mpi -in in.nvt_main -e screen
+srun --mpi=pmi2 lmp -in in.nvt -e screen
 wait
-srun -n py_nptot ./lmp_mpi -in in.npt -e screen
-wait
-srun -n py_nptot ./lmp_mpi -in in.rdf -e screen
+srun --mpi=pmi2 lmp -in in.nvt_main -e screen
