@@ -57,6 +57,7 @@ thermo          10000
 dump            main all custom 10000 config_${ts}.lammpstrj id type xu yu zu
 velocity        all create 1 1231 mom yes  #reset momentum to account for errors from langevin
 
+
 #####################################################
 # Equilibration (NVT dynamics at kT=1)
 #####################################################
