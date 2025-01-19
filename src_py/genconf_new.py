@@ -30,14 +30,14 @@ num_hrs   = 47 # Total number of hours for run
 num_nodes = 6  # Number of nodes
 num_cores = 36 # Number of cores per node
 hpc_sys   = 'cades'  # Opt: kestrel, cades
-sys_type  = 'S1' # S1; S2; S3; S4
+sys_type  = 'S3' # S1; S2; S3; S4
 
 #---------input details - Topology--------------------------------
-frac_anions  = [1/10]#,1/15,1/5]#,1/15,1/20]#, 1/10, 1/5] # fraction of anions
+frac_anions  = [1/11]#,1/11,1/15,1/5,1/20]#,1/15,1/20]#, 1/10, 1/5] # fraction of anions
 tot_mons     = 4000 # total number of MONOMERS in the poly CHAIN
 chain_mw     = [40] # of monomer range per chain
 num_chains   = [int(tot_mons/x) for x in chain_mw] # of polymerized ch
-unpoly_farr  = [0.0] # fraction of unpolymerized mons
+unpoly_farr  = [0.6] # fraction of unpolymerized mons
 density      = 0.8 # system density
 cg_per_mon   = 2 # number of blobs per polymer monomer
 blob_charge  = 0.2 # charge per blob
@@ -51,6 +51,9 @@ else:
 if sys_type == 'S1' and max(unpoly_farr) > 0:
     raise RuntimeError('Cannot have unpolymerized frac for S1')
 
+if sys_type != 'S1' and max(unpoly_farr) == 0:
+    raise RuntimeError('Need unpolymerized frac for S2-S4')
+
 #---------input details - Pair Coeff--------------------------------
 gen_pair_lst = 1 # Generate pair list
 ntypes       = 4 # Number of types
@@ -60,7 +63,7 @@ name_list    = ['VEC without C=O','C=O of VEC','STFSI'] # Name of groups
 eps_list     = [1, 1, 1] # epsilon values
 sig_list     = [1,1,1] # sigma values
 
-if max(unpoly_farr) > 0: # unpolymerized VEC
+if sys_type.lower() != 's1': # unpolymerized VEC
     name_list.extend(['unpoly_VEC: VEC','unpoly_VEC: C=O'])
     eps_list.extend([1,1])
     sig_list.extend([1,1])
@@ -76,13 +79,20 @@ coulcut_rat  = [1.0,1.0,1.0,1.0] #coulumbic cut off ratio
 coulcut_list = [i*coul_cutoff for  i in coulcut_rat] # coul-cut values
 
 #---------input details - Bond Coeff--------------------------------
-gen_bond_lst = 1 # Generate bond list
-bname_list   = ['VEC-VEC (no C=O) [1-1]',' VEC - C=O [1-2]', \
-                'VEC - STFSI [1-3]' , 'STFSI - STFSI [3-3]'] #Name of groups
-kspr_list    = [30, 50, 30, 30] # spring constants
-bcon_list    = [[1,1],[1,2],[1,3],[3,3]] # connectivity list
+if sys_type.lower() != 's3':
+    gen_bond_lst = 1 # Generate bond list
+    bname_list   = ['VEC-VEC (no C=O) [1-1]',' VEC - C=O [1-2]', \
+                    'VEC - STFSI [1-3]' , 'STFSI - STFSI [3-3]'] #Name of groups
+    kspr_list    = [30, 50, 30, 30] # spring constants
+    bcon_list    = [[1,1],[1,2],[1,3],[3,3]] # connectivity list
+else:
+    gen_bond_lst = 1 # Generate bond list
+    bname_list   = ['VEC-VEC (no C=O) [1-1]',' VEC - C=O [1-2]', \
+                    'STFSI - STFSI [3-3]'] #Name of groups
+    kspr_list    = [30, 50, 30] # spring constants
+    bcon_list    = [[1,1],[1,2],[3,3]] # connectivity list
 
-if max(unpoly_farr) > 0: # unpolymerized VEC
+if sys_type.lower() != 's1': # unpolymerized VEC
     ntypes = 6
     bname_list.append('unpoly_VEC: VEC - unpoly_VEC: C=O [4-5]')
     kspr_list.append(50) 
@@ -212,7 +222,7 @@ for mw_ch in range(len(chain_mw)):
 
                 #---Run LAMMPS files-------------
                 edit_generate_input_lmp_files('in.init_var',ang_lmp_data_fyle)
-                run_lammps(chain_mw[mw_ch],round(frac_anions[fr_an],2),casenum,\
+                run_lammps(sys_type,chain_mw[mw_ch],round(frac_anions[fr_an],2),casenum,\
                            'jobmain_var.sh','jobmain.sh',num_hrs,num_nodes,num_cores)
                 
                 #----Copy/Backup initial files---
