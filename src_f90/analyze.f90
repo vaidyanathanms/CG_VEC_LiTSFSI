@@ -111,6 +111,10 @@ SUBROUTINE READ_ANA_IP_FILE()
 
         READ(anaread,*,iostat=ierr) c_iontype
 
+     ELSEIF(dumchar == 'pion_type') THEN
+
+        READ(anaread,*,iostat=ierr) p_iontype       
+
      !Here onwards static properties
      ELSEIF(dumchar == 'compute_rdf') THEN
 
@@ -141,7 +145,8 @@ SUBROUTINE READ_ANA_IP_FILE()
         READ(anaread,*,iostat=ierr) rgfreq,rgall,rgavg
 
      ELSEIF(dumchar == 'catanneigh') THEN
-        
+
+        catan_neighcalc = 1
         READ(anaread,*,iostat=ierr) neighfreq,maxneighsize,rneigh_cut
         
      !Here onwards dynamic properties
@@ -152,7 +157,7 @@ SUBROUTINE READ_ANA_IP_FILE()
 
      ELSEIF(dumchar == 'compute_piondiff') THEN !stored in polyionarray
 
-        READ(anaread,*,iostat=ierr) p_iontype
+        READ(anaread,*,iostat=ierr) pion_diff
         pion_dynflag = 1
 
      ELSEIF(dumchar == 'compute_ciondiff') THEN
@@ -689,7 +694,21 @@ SUBROUTINE STRUCT_MAIN(tval)
   INTEGER :: clock_rate, clock_max
 
   IF(rgcalc .AND. mod(tval-1,rgfreq)==0) CALL COMPUTE_RADGYR(tval)
-  IF(rdfcalc .AND. mod(tval-1,rdffreq)==0) CALL COMPUTE_RDF(tval)
+
+  IF(rdfcalc) THEN
+     
+     IF(tval == 1) THEN
+
+        CALL SYSTEM_CLOCK(t1,clock_rate,clock_max)
+        CALL COMPUTE_RDF(tval)
+        CALL SYSTEM_CLOCK(t2,clock_rate,clock_max)
+        PRINT *, 'Elapsed real time for RDF analysis: ',REAL(t2&
+             &-t1)/REAL(clock_rate), ' seconds'
+
+     END IF
+     IF(mod(tval-1,rdffreq)==0) CALL COMPUTE_RDF(tval)     
+     
+  END IF
 
   IF(catan_neighcalc) THEN
      
@@ -699,8 +718,8 @@ SUBROUTINE STRUCT_MAIN(tval)
         CALL SYSTEM_CLOCK(t1,clock_rate,clock_max)
         CALL CAT_AN_NEIGHS()
         CALL SYSTEM_CLOCK(t2,clock_rate,clock_max)
-        PRINT *, 'Elapsed real time for LiP-Neight Analysis= ',REAL(t2&
-             &-t1)/REAL(clock_rate)
+        PRINT *, 'Elapsed real time for neighbor analysis: ',REAL(t2&
+             &-t1)/REAL(clock_rate), ' seconds'
 
      END IF
      
@@ -713,13 +732,14 @@ SUBROUTINE STRUCT_MAIN(tval)
      IF(tval == 1) THEN
         rdf_p_fb = 0.0; rdf_p_ff=0.0; rdf_p_bb = 0.0        
         CALL SYSTEM_CLOCK(t1,clock_rate,clock_max)
-        CALL  SORT_POLY_FREE_BOUND_COMPLEX()
+        CALL  SORT_POLY_FREE_BOUND_COMPLEX(tval)
         CALL SYSTEM_CLOCK(t2,clock_rate,clock_max)
-        PRINT *, 'Elapsed real time for bound/free RDF= ',REAL(t2&
-             &-t1)/REAL(clock_rate)           
+        PRINT *, 'Elapsed real time for bound/free RDF: ',REAL(t2&
+             &-t1)/REAL(clock_rate), ' seconds'           
      END IF
      
-     IF(mod(tval,rdffreq) == 0) CALL SORT_POLY_FREE_BOUND_COMPLEX()
+     IF(mod(tval,rdffreq) == 0) CALL&
+          & SORT_POLY_FREE_BOUND_COMPLEX(tval)
      
   END IF
 
@@ -731,8 +751,8 @@ SUBROUTINE STRUCT_MAIN(tval)
         CALL SYSTEM_CLOCK(t1,clock_rate,clock_max)
         CALL CLUSTER_ANALYSIS(tval)
         CALL SYSTEM_CLOCK(t2,clock_rate,clock_max)
-        PRINT *, 'Elapsed real time for Cluster Analysis= ',REAL(t2&
-             &-t1)/REAL(clock_rate)           
+        PRINT *, 'Elapsed real time for cluster analysis= ',REAL(t2&
+             &-t1)/REAL(clock_rate), ' seconds'           
      ELSE
         
         CALL CLUSTER_ANALYSIS(tval)
@@ -897,8 +917,8 @@ SUBROUTINE SORTALLARRAYS()
   IF (clust_calc) THEN
 
      ntotion_centers = ioncnt + c_ioncnt
-     PRINT *, "Total number of ion centers= ", ntotion_centers
-     cnt = 0
+     PRINT *, "Total number of ion centers: ", ntotion_centers
+     cnt = 1
 
      ALLOCATE(allionids(ntotion_centers,2),stat = AllocateStatus)
      IF(AllocateStatus/=0) STOP "did not allocate allionids"
@@ -1761,7 +1781,7 @@ END SUBROUTINE CLUSTER_ANALYSIS
 
 !--------------------------------------------------------------------
 
-SUBROUTINE SORT_POLY_FREE_BOUND_COMPLEX()
+SUBROUTINE SORT_POLY_FREE_BOUND_COMPLEX(tval)
 
   USE ANALYZE_PARAMS
 
@@ -1771,6 +1791,7 @@ SUBROUTINE SORT_POLY_FREE_BOUND_COMPLEX()
   INTEGER :: pfree,pbound,pboundtot,pfreetot,AllocateStatus
   REAL :: rxval,ryval,rzval,rval
   INTEGER, DIMENSION(1:p_ioncnt,0:nproc-1) :: polbounddum,polfreedum
+  INTEGER, INTENT(IN) :: tval
 
  pfree = 0; pbound = 0; pboundtot=0; pfreetot=0;catcnt = 1
 
@@ -1788,7 +1809,7 @@ SUBROUTINE SORT_POLY_FREE_BOUND_COMPLEX()
   END DO
 !$OMP END DO
 
-!$OMP DO PRIVATE(pcnt,a1id,boundflag,a2id,rxval,ryval,rzval,rval,tid)& 
+!$OMP DO PRIVATE(pcnt,tid,a1id,boundflag,a2id,rxval,ryval,rzval,rval)& 
 !$OMP& REDUCTION(+:pboundtot,pfreetot) FIRSTPRIVATE(pfree,pbound,catcnt)
   DO pcnt = 1,p_ioncnt
 
@@ -1796,7 +1817,7 @@ SUBROUTINE SORT_POLY_FREE_BOUND_COMPLEX()
      a1id = polyionarray(pcnt,1)
      catcnt = 1
      boundflag = 0
-
+     
      DO WHILE(catcnt .LE. ioncnt)
      
         a2id  = ionarray(catcnt,1)
@@ -1810,7 +1831,7 @@ SUBROUTINE SORT_POLY_FREE_BOUND_COMPLEX()
         rzval = rzval - box_zl*ANINT(rzval/box_zl)
         
         rval = sqrt(rxval**2 + ryval**2 + rzval**2)
-
+        
         IF(rval .LT. rcatpol_cut1) THEN
 
            pbound = pbound + 1
@@ -1839,10 +1860,10 @@ SUBROUTINE SORT_POLY_FREE_BOUND_COMPLEX()
 !$OMP END DO
 !$OMP END PARALLEL
 
-  IF(pboundtot == 0 .OR. pfreetot == 0) THEN
+  IF(pboundtot == 0 .AND. pfreetot == 0) THEN
 
      PRINT *, "Zero pboundtot/pfreetot"
-     PRINT *, pboundtot, pfreetot
+     PRINT *, pboundtot, pfreetot, tval
      STOP
 
   END IF
@@ -1938,13 +1959,19 @@ SUBROUTINE FREE_BOUND_POLRDF(pfreetot,pboundtot)
 
      a1id = polfreearr(i)
      
-     IF(aidvals(a1id,3) .NE. 9) STOP "Wrong Oxygen atom for a1id"
+     IF(aidvals(a1id,3) .NE. p_iontype) THEN
+        PRINT *, a1id, aidvals(a1id,3), p_iontype
+        STOP "Wrong polyion for a1id"
+     END IF
 
      DO j = i,pboundtot
 
         a2id   = polboundarr(j)
 
-        IF(aidvals(a2id,3) .NE. 9) STOP "Wrong Oxygen atom for a2id"
+        IF(aidvals(a2id,3) .NE. p_iontype) THEN
+           PRINT *, a2id, aidvals(a2id,3), p_iontype
+           STOP "Wrong polyion for a2id"
+        END IF
 
         rxval = rxyz_lmp(a1id,1) - rxyz_lmp(a2id,1) 
         ryval = rxyz_lmp(a1id,2) - rxyz_lmp(a2id,2) 
@@ -1975,13 +2002,19 @@ SUBROUTINE FREE_BOUND_POLRDF(pfreetot,pboundtot)
 
      a1id = polfreearr(i)
      
-     IF(aidvals(a1id,3) .NE. 9) STOP "Wrong Oxygen atom for a1id"
+     IF(aidvals(a1id,3) .NE. p_iontype) THEN
+        PRINT *, a1id, aidvals(a1id,3), p_iontype
+        STOP "Wrong polyion for a1id"
+     END IF
 
      DO j = i+1,pfreetot
 
         a2id   = polfreearr(j)
 
-        IF(aidvals(a2id,3) .NE. 9) STOP "Wrong Oxygen atom for a2id"
+        IF(aidvals(a2id,3) .NE. p_iontype) THEN
+           PRINT *, a2id, aidvals(a2id,3), p_iontype
+           STOP "Wrong polyion for a2id"
+        END IF
 
         rxval = rxyz_lmp(a1id,1) - rxyz_lmp(a2id,1) 
         ryval = rxyz_lmp(a1id,2) - rxyz_lmp(a2id,2) 
@@ -2011,14 +2044,20 @@ SUBROUTINE FREE_BOUND_POLRDF(pfreetot,pboundtot)
   DO i = 1,pboundtot
 
      a1id = polboundarr(i)
-     
-     IF(aidvals(a1id,3) .NE. 9) STOP "Wrong Oxygen atom for a1id"
+
+     IF(aidvals(a1id,3) .NE. p_iontype) THEN
+        PRINT *, a1id, aidvals(a1id,3), p_iontype
+        STOP "Wrong polyion for a1id"
+     END IF
 
      DO j = i+1,pboundtot
 
         a2id   = polboundarr(j)
 
-        IF(aidvals(a2id,3) .NE. 9) STOP "Wrong Oxygen atom for a2id"
+        IF(aidvals(a2id,3) .NE. p_iontype) THEN
+           PRINT *, a2id, aidvals(a2id,3), p_iontype
+           STOP "Wrong polyion for a2id"
+        END IF
 
         rxval = rxyz_lmp(a1id,1) - rxyz_lmp(a2id,1) 
         ryval = rxyz_lmp(a1id,2) - rxyz_lmp(a2id,2) 
@@ -2044,8 +2083,7 @@ SUBROUTINE FREE_BOUND_POLRDF(pfreetot,pboundtot)
 !$OMP END DO
 
 
-!$OMP DO
-
+!$OMP DO 
   DO i = 0,rmaxbin-1
 
      rdf_p_fb(i) = rdf_p_fb(i) + REAL(dumrdf_p_fb(i))*rvolval&
@@ -2773,9 +2811,9 @@ SUBROUTINE ALLOCATE_ANALYSIS_ARRAYS()
   IF(bfrdf_calc) THEN
      ALLOCATE(rdf_p_fb(0:rmaxbin-1),stat = AllocateStatus)
      IF(AllocateStatus/=0) STOP "did not allocate rdf_p_fb"
-     ALLOCATE(rdf_p_fb(0:rmaxbin-1),stat = AllocateStatus)
+     ALLOCATE(rdf_p_bb(0:rmaxbin-1),stat = AllocateStatus)
      IF(AllocateStatus/=0) STOP "did not allocate rdf_p_bb"
-     ALLOCATE(rdf_p_fb(0:rmaxbin-1),stat = AllocateStatus)
+     ALLOCATE(rdf_p_ff(0:rmaxbin-1),stat = AllocateStatus)
      IF(AllocateStatus/=0) STOP "did not allocate rdf_p_ff"
   ELSE
      ALLOCATE(rdf_p_fb(1),stat = AllocateStatus)

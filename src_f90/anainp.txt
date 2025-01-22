@@ -15,6 +15,8 @@ poly_types
 1 2 3
 compute_rg
 1 1 1
+pion_type
+2
 ion_type
 4
 cion_type
@@ -26,7 +28,7 @@ compute_rdf
 catanneigh
 1 10 2.0
 compute_boundpolrdf
-2.0
+4.0
 compute_clust
 1
 compute_catanrestime
