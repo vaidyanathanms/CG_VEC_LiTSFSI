@@ -27,16 +27,17 @@ MODULE ANALYZE_PARAMS
   INTEGER :: p_ioncnt, p_iontype
   INTEGER :: maxneighsize, neighfreq
   INTEGER :: ntotion_centers
-  REAL    :: rneigh_cut
+  REAL    :: rneigh_cut,rcatan_cut,rcatpol_cut1,rcatpol_cut2
   
   ! All analysis flags
   INTEGER :: polyflag
   INTEGER :: rdfcalc, rgcalc, rgall, rgavg
-  INTEGER :: ion_dynflag, cion_dynflag, pion_dynflag
-  INTEGER :: ion_diff, cion_diff, pion_diff
   INTEGER :: catan_neighcalc
   INTEGER :: bfrdf_calc
   INTEGER :: clust_calc
+  INTEGER :: ion_dynflag, cion_dynflag, pion_dynflag
+  INTEGER :: ion_diff, cion_diff, pion_diff
+  INTEGER :: catan_autocfflag, catpol_autocfflag
 
   ! File names and unit numbers
   CHARACTER(LEN = 256) :: ana_fname,data_fname,traj_fname,log_fname

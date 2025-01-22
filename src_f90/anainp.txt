@@ -19,10 +19,6 @@ ion_type
 4
 cion_type
 3
-iondiff
-1
-ciondiff
-1
 compute_rdf
 1 100 10 2
 3 4
@@ -30,6 +26,14 @@ compute_rdf
 catanneigh
 1 10 2.0
 compute_boundpolrdf
-1
+2.0
 compute_clust
+1
+compute_catanrestime
+2.0
+compute_catpolrestime
+2.0
+compute_iondiff
+1
+compute_ciondiff
 1

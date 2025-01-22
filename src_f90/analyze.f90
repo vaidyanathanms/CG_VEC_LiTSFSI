@@ -67,6 +67,7 @@ SUBROUTINE READ_ANA_IP_FILE()
 
      IF(ierr .LT. 0) EXIT
 
+     ! Read file and trajectory details
      IF(dumchar == 'datafile') THEN
         
         READ(anaread,*,iostat=ierr) data_fname
@@ -86,7 +87,8 @@ SUBROUTINE READ_ANA_IP_FILE()
      ELSEIF(dumchar == 'freqfr') THEN
 
         READ(anaread,*,iostat=ierr) freqfr
-        
+     
+     ! Read chain details
      ELSEIF(dumchar == 'nchains') THEN
 
         READ(anaread,*,iostat=ierr) nchains
@@ -109,21 +111,7 @@ SUBROUTINE READ_ANA_IP_FILE()
 
         READ(anaread,*,iostat=ierr) c_iontype
 
-     ELSEIF(dumchar == 'iondiff') THEN
-
-        READ(anaread,*,iostat=ierr) ion_diff
-        ion_dynflag = 1
-
-     ELSEIF(dumchar == 'ciondiff') THEN
-
-        READ(anaread,*,iostat=ierr) cion_diff
-        cion_dynflag = 1
-
-     ELSEIF(dumchar == 'piondiff') THEN !stored in polyionarray
-
-        READ(anaread,*,iostat=ierr) p_iontype
-        pion_dynflag = 1
-
+     !Here onwards static properties
      ELSEIF(dumchar == 'compute_rdf') THEN
 
         rdfcalc = 1
@@ -139,8 +127,9 @@ SUBROUTINE READ_ANA_IP_FILE()
         END DO
 
      ELSEIF(dumchar == 'compute_boundpolrdf') THEN
-        
-        READ(anaread,*,iostat=ierr) bfrdf_calc
+
+        bfrdf_calc = 1
+        READ(anaread,*,iostat=ierr) rcatpol_cut1
 
      ELSEIF(dumchar == 'compute_clust') THEN
 
@@ -154,7 +143,34 @@ SUBROUTINE READ_ANA_IP_FILE()
      ELSEIF(dumchar == 'catanneigh') THEN
         
         READ(anaread,*,iostat=ierr) neighfreq,maxneighsize,rneigh_cut
+        
+     !Here onwards dynamic properties
+     ELSEIF(dumchar == 'compute_iondiff') THEN
 
+        READ(anaread,*,iostat=ierr) ion_diff
+        ion_dynflag = 1
+
+     ELSEIF(dumchar == 'compute_piondiff') THEN !stored in polyionarray
+
+        READ(anaread,*,iostat=ierr) p_iontype
+        pion_dynflag = 1
+
+     ELSEIF(dumchar == 'compute_ciondiff') THEN
+
+        READ(anaread,*,iostat=ierr) cion_diff
+        cion_dynflag = 1
+
+     ELSEIF(dumchar == 'compute_catanrestime') THEN
+        
+        READ(anaread,*,iostat=ierr) rcatan_cut
+        catan_autocfflag = 1
+
+     ELSEIF(dumchar == 'compute_catpolrestime') THEN
+
+        READ(anaread,*,iostat=ierr) rcatpol_cut2
+        catpol_autocfflag = 1
+
+     ! Read log filename
      ELSEIF(dumchar == 'log_file') THEN
 
         READ(anaread,*,iostat=ierr) log_fname
@@ -196,6 +212,7 @@ SUBROUTINE DEFAULTVALUES()
   ion_dynflag = 0; cion_dynflag = 0; pion_dynflag = 0
   ion_diff = 0; cion_diff = 0; pion_diff = 0
   bfrdf_calc = 0
+  catan_autocfflag = 0; catpol_autocfflag = 0
 
   ! Initialize iontypes
   c_iontype = -1; p_iontype = -1; iontype = -1
@@ -209,10 +226,13 @@ SUBROUTINE DEFAULTVALUES()
   ! Initialzie structural quantities
   rdomcut = 10.0;  rmaxbin = 100; rbinval = REAL(rdomcut)&
        &/REAL(rmaxbin)
+  rcatan_cut = 0.0; rneigh_cut = 0.0
 
   ! Initialize structural averages
   rvolavg = 0; rgavg = 0
 
+  ! Initialize dynamical quantities
+  rcatpol_cut1 = 0.0; rcatpol_cut2 = 0.0
 END SUBROUTINE DEFAULTVALUES
 
 !--------------------------------------------------------------------
@@ -763,123 +783,115 @@ SUBROUTINE SORTALLARRAYS()
      END IF
 
   END DO
-
-  IF(catan_neighcalc .OR. ion_dynflag .OR. cion_dynflag) THEN
-     PRINT *, "Number of atoms of ion type: ", ioncnt
-     PRINT *, "Number of atoms of cntion type: ", c_ioncnt
-     
-     ALLOCATE(ionarray(ioncnt,2),stat = AllocateStatus)
-     IF(AllocateStatus/=0) STOP "did not allocate ionarray"
-     ALLOCATE(counterarray(c_ioncnt,2),stat = AllocateStatus)
-     IF(AllocateStatus/=0) STOP "did not allocate ionarray"
   
-     ! Load ion array
-
-     i = 0
-
-     DO WHILE(dumsortarr(i+1,1) .NE. -1) 
-
-        i = i + 1
-        ionarray(i,1) = dumsortarr(i,1)
-        ionarray(i,2) = dumsortarr(i,2)
-        
-     END DO
-
-     IF(i .NE. ioncnt) THEN
-        PRINT *, i, ioncnt
-        STOP "Wrong total count in ionarray"
-     END IF
+  ! Always identify ion and counter-ion types
+  PRINT *, "Number of atoms of ion type: ", ioncnt
+  PRINT *, "Number of atoms of cntion type: ", c_ioncnt
      
-     DO i = 1,ioncnt
-     
-        IF(ionarray(i,1) == -1 .OR. ionarray(i,2) == -1) THEN
-           
-           PRINT *, i,ionarray(i,1), ionarray(i,2)
-           PRINT *, "Something wrong in assigning ionarray"
-           STOP
-           
-        END IF
-        
-        IF(ionarray(i,2) .NE. iontype) THEN
-           
-           PRINT *, i,ionarray(i,1), ionarray(i,2)
-           PRINT *, "Something wrong in ionarray type"
-           STOP
-           
-        END IF
-        
-     END DO
-         
-     OPEN(unit = 93,file="iontypelist.txt",action="write",status="replace&
-          &")
-     
-     WRITE(93,*) "Reference type/count: ", iontype, ioncnt
-     
-     DO i = 1,ioncnt
-        WRITE(93,'(3(I0,1X))') i, ionarray(i,1), ionarray(i,2)
-     END DO
-     
-     CLOSE(93)
-     
-     ! Load counterion array
-     
-     i = 0
-     
-     DO WHILE(dumcionarr(i+1,1) .NE. -1) 
-        
-        i = i + 1
-        counterarray(i,1) = dumcionarr(i,1)
-        counterarray(i,2) = dumcionarr(i,2)
-        
-     END DO
-     
-     IF(i .NE. c_ioncnt) THEN
-        PRINT *, i, c_ioncnt
-        STOP "Wrong total count in counterarray"
-     END IF
-     
-     DO i = 1,c_ioncnt
-        
-        IF(counterarray(i,1) == -1 .OR. counterarray(i,2) == -1) THEN
-           
-           PRINT *, i,counterarray(i,1), counterarray(i,2)
-           PRINT *, "Something wrong in assigning counterarray"
-           STOP
-           
-        END IF
-        
-        IF(counterarray(i,2) .NE. c_iontype) THEN
-           
-           PRINT *, i,counterarray(i,1), counterarray(i,2)
-           PRINT *, "Something wrong in counterionarray type"
-           STOP
-           
-        END IF
-        
-     END DO
-     
-     
-     OPEN(unit = 93,file="cntionlist.txt",action="write",status="repl&
-          &ace")
-     
-     WRITE(93,*) "Reference type/count: ", c_iontype, c_ioncnt
-     
-     DO i = 1,c_ioncnt
-        
-        WRITE(93,'(3(I0,1X))') i, counterarray(i,1), counterarray(i,2)
-        
-     END DO
-     
-     CLOSE(93)
+  ALLOCATE(ionarray(ioncnt,2),stat = AllocateStatus)
+  IF(AllocateStatus/=0) STOP "did not allocate ionarray"
+  ALLOCATE(counterarray(c_ioncnt,2),stat = AllocateStatus)
+  IF(AllocateStatus/=0) STOP "did not allocate ionarray"
   
-  ELSE
+  ! Load ion array
 
-     ALLOCATE(ionarray(1,2),stat = AllocateStatus)
-     DEALLOCATE(ionarray)
-     ALLOCATE(counterarray(1,2),stat = AllocateStatus)
-     DEALLOCATE(counterarray)
+  i = 0
+     
+  DO WHILE(dumsortarr(i+1,1) .NE. -1) 
 
+     i = i + 1
+     ionarray(i,1) = dumsortarr(i,1)
+     ionarray(i,2) = dumsortarr(i,2)
+     
+  END DO
+
+  IF(i .NE. ioncnt) THEN
+     PRINT *, i, ioncnt
+     STOP "Wrong total count in ionarray"
   END IF
+  
+  DO i = 1,ioncnt
+     
+     IF(ionarray(i,1) == -1 .OR. ionarray(i,2) == -1) THEN
+        
+        PRINT *, i,ionarray(i,1), ionarray(i,2)
+        PRINT *, "Something wrong in assigning ionarray"
+        STOP
+        
+     END IF
+        
+     IF(ionarray(i,2) .NE. iontype) THEN
+           
+        PRINT *, i,ionarray(i,1), ionarray(i,2)
+        PRINT *, "Something wrong in ionarray type"
+        STOP
+        
+     END IF
+        
+  END DO
+         
+  OPEN(unit = 93,file="iontypelist.txt",action="write",status="replace&
+       &")
+     
+  WRITE(93,*) "Reference type/count: ", iontype, ioncnt
+     
+  DO i = 1,ioncnt
+     WRITE(93,'(3(I0,1X))') i, ionarray(i,1), ionarray(i,2)
+  END DO
+     
+  CLOSE(93)
+     
+  ! Load counterion array
+     
+  i = 0
+  
+  DO WHILE(dumcionarr(i+1,1) .NE. -1) 
+     
+     i = i + 1
+     counterarray(i,1) = dumcionarr(i,1)
+     counterarray(i,2) = dumcionarr(i,2)
+     
+  END DO
+  
+  IF(i .NE. c_ioncnt) THEN
+     PRINT *, i, c_ioncnt
+     STOP "Wrong total count in counterarray"
+  END IF
+     
+  DO i = 1,c_ioncnt
+     
+     IF(counterarray(i,1) == -1 .OR. counterarray(i,2) == -1) THEN
+        
+        PRINT *, i,counterarray(i,1), counterarray(i,2)
+        PRINT *, "Something wrong in assigning counterarray"
+        STOP
+        
+     END IF
+     
+     IF(counterarray(i,2) .NE. c_iontype) THEN
+        
+        PRINT *, i,counterarray(i,1), counterarray(i,2)
+        PRINT *, "Something wrong in counterionarray type"
+        STOP
+        
+     END IF
+        
+  END DO
+     
+  
+  OPEN(unit = 93,file="cntionlist.txt",action="write",status="repl&
+       &ace")
+  
+  WRITE(93,*) "Reference type/count: ", c_iontype, c_ioncnt
+     
+  DO i = 1,c_ioncnt
+     
+     WRITE(93,'(3(I0,1X))') i, counterarray(i,1), counterarray(i,2)
+     
+  END DO
+     
+  CLOSE(93)
+ 
 
   ! Cluster calc requires to add iontype and c_iontype in same array
   IF (clust_calc) THEN
@@ -1799,7 +1811,7 @@ SUBROUTINE SORT_POLY_FREE_BOUND_COMPLEX()
         
         rval = sqrt(rxval**2 + ryval**2 + rzval**2)
 
-        IF(rval .LT. rneigh_cut) THEN
+        IF(rval .LT. rcatpol_cut1) THEN
 
            pbound = pbound + 1
            pboundtot = pboundtot + 1
@@ -2058,6 +2070,8 @@ SUBROUTINE DYNAMICS_MAIN()
 
   IF(ion_diff) CALL DIFF_IONS()
   IF(cion_diff) CALL DIFF_COUNTERIONS()
+  IF(catan_autocfflag) CALL RESIDENCE_TIME_CATAN()
+  IF(catpol_autocfflag) CALL RESIDENCE_TIME_CATPOL()
 
 END SUBROUTINE DYNAMICS_MAIN
 
@@ -2250,6 +2264,221 @@ SUBROUTINE DIFF_COUNTERIONS()
   CLOSE(91)
 
 END SUBROUTINE DIFF_COUNTERIONS
+
+!--------------------------------------------------------------------
+!Ref: Borodin and Smith
+!Macromolecules Vol: 39, No: 4, 1620-1629, 2006
+!Here we look at the residence time on the polymer-ion
+SUBROUTINE RESIDENCE_TIME_CATPOL()
+
+  USE ANALYZE_PARAMS
+  IMPLICIT NONE
+
+  INTEGER :: i,j,tval,a1id,a2id,ierr,ifin,tinc,tim
+  REAL :: rxval,ryval,rzval,rval
+  INTEGER,DIMENSION(1:p_ioncnt,nframes) :: autocf
+  REAL,DIMENSION(0:nframes-1) :: tplot_cf
+
+  OPEN(unit = 91,file = "pol_autocorr.txt", status="replace", action &
+       &="write",iostat=ierr)
+
+  IF(ierr /= 0) STOP "residence time file not found"
+
+!$OMP PARALLEL
+!$OMP DO PRIVATE(i,j)
+  DO j = 1,nframes
+
+     DO i = 1,p_ioncnt
+
+        autocf(i,j) = 0
+
+     END DO
+     
+     tplot_cf(j-1) = 0
+
+  END DO
+!$OMP END DO
+
+!$OMP DO PRIVATE(tval,i,j,a1id,a2id,rxval,ryval,rzval,rval)
+  DO tval = 1,nframes 
+
+     DO i = 1,p_ioncnt !populate autocorrelation fn array
+
+        j = 1; a1id = polyionarray(i,1)
+        
+        DO WHILE(j .LE. ioncnt)
+
+           a2id = ionarray(j,1)
+           
+           rxval = ptrx_lmp(a1id,tval) - itrx_lmp(a2id,tval) 
+           ryval = ptry_lmp(a1id,tval) - itry_lmp(a2id,tval) 
+           rzval = ptrz_lmp(a1id,tval) - itrz_lmp(a2id,tval) 
+           
+           rxval = rxval - box_xl*ANINT(rxval/box_xl)
+           ryval = ryval - box_yl*ANINT(ryval/box_yl)
+           rzval = rzval - box_zl*ANINT(rzval/box_zl)
+           
+           rval = sqrt(rxval**2 + ryval**2 + rzval**2)
+           
+           IF(rval .LT. rcatpol_cut2) THEN
+              
+              autocf(i,tval) = 1
+              j = ioncnt+1
+              
+           ELSE
+
+              j = j +1
+
+           END IF
+
+        END DO
+
+     END DO
+
+  END DO
+!$OMP END DO
+
+!$OMP DO PRIVATE(tinc,ifin,tim,i,j)
+
+  DO tinc = 0, nframes-1 !compute spectral product
+
+     ifin = nframes - tinc
+     
+     DO i = 1,ifin
+        
+        tim = i + tinc
+      
+        DO j = 1,p_ioncnt
+
+           tplot_cf(tinc) = tplot_cf(tinc) + REAL(autocf(j,tim)&
+                &*autocf(j,i))
+           
+        END DO
+
+     END DO
+
+     tplot_cf(tinc) = tplot_cf(tinc)/REAL(ifin*p_ioncnt)
+     
+  END DO
+!$OMP END DO
+!$OMP END PARALLEL
+
+  DO tinc = 0, nframes-1
+
+     WRITE(91,"(I0,1X,F14.6)") tinc, tplot_cf(tinc)
+
+  END DO
+
+
+END SUBROUTINE RESIDENCE_TIME_CATPOL
+
+!--------------------------------------------------------------------
+
+!Ref: Borodin and Smith
+!Macromolecules Vol: 39, No: 4, 1620-1629, 2006
+!Here we look at the residence time on the ANION
+SUBROUTINE RESIDENCE_TIME_CATAN()
+
+  USE ANALYZE_PARAMS
+  IMPLICIT NONE
+
+  INTEGER :: i,j,tval,a1id,a2id,ierr,ifin,tinc,tim
+  REAL :: rxval,ryval,rzval,rval
+  INTEGER,DIMENSION(1:c_ioncnt,nframes) :: autocf
+  REAL,DIMENSION(0:nframes-1) :: tplot_cf
+
+  OPEN(unit = 91,file = "cion_autocorr.txt", status="replace", action&
+       & ="write",iostat=ierr)
+
+  IF(ierr /= 0) STOP "residence time file not found"
+
+!$OMP PARALLEL
+!$OMP DO PRIVATE(i,j)
+  DO j = 1,nframes
+
+     DO i = 1,c_ioncnt
+
+        autocf(i,j) = 0
+
+     END DO
+     
+     tplot_cf(j-1) = 0
+
+  END DO
+!$OMP END DO
+
+!$OMP DO PRIVATE(tval,i,j,a1id,a2id,rxval,ryval,rzval,rval)
+  DO tval = 1,nframes 
+
+     DO i = 1,c_ioncnt !populate autocorrelation fn array
+
+        j = 1; a1id = counterarray(i,1)
+        
+        DO WHILE(j .LE. ioncnt)
+
+           a2id = ionarray(j,1)
+           
+           rxval = ptrx_lmp(a1id,tval) - itrx_lmp(a2id,tval) 
+           ryval = ptry_lmp(a1id,tval) - itry_lmp(a2id,tval) 
+           rzval = ptrz_lmp(a1id,tval) - itrz_lmp(a2id,tval) 
+           
+           rxval = rxval - box_xl*ANINT(rxval/box_xl)
+           ryval = ryval - box_yl*ANINT(ryval/box_yl)
+           rzval = rzval - box_zl*ANINT(rzval/box_zl)
+           
+           rval = sqrt(rxval**2 + ryval**2 + rzval**2)
+           
+           IF(rval .LT. rcatan_cut) THEN
+              
+              autocf(i,tval) = 1
+              j = ioncnt+1
+              
+           ELSE
+
+              j = j +1
+
+           END IF
+
+        END DO
+
+     END DO
+
+  END DO
+!$OMP END DO
+
+!$OMP DO PRIVATE(tinc,ifin,tim,i,j)
+
+  DO tinc = 0, nframes-1 !compute spectral product
+
+     ifin = nframes - tinc
+     
+     DO i = 1,ifin
+        
+        tim = i + tinc
+      
+        DO j = 1,c_ioncnt
+
+           tplot_cf(tinc) = tplot_cf(tinc) + REAL(autocf(j,tim)&
+                &*autocf(j,i))
+           
+        END DO
+
+     END DO
+
+     tplot_cf(tinc) = tplot_cf(tinc)/REAL(ifin*c_ioncnt)
+     
+  END DO
+!$OMP END DO
+!$OMP END PARALLEL
+
+  DO tinc = 0, nframes-1
+
+     WRITE(91,"(I0,1X,F14.6)") tinc, tplot_cf(tinc)
+
+  END DO
+
+
+END SUBROUTINE RESIDENCE_TIME_CATAN
 
 !--------------------------------------------------------------------
 
