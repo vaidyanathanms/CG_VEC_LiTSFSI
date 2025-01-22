@@ -1,11 +1,11 @@
 datafile
 init_config.data
 trajectory_file
-config_1000000.lammpstrj
+config_8000000.lammpstrj
 nframes
-10
+300
 skipfr
-0
+100
 freqfr
 0
 nchains
@@ -29,3 +29,7 @@ compute_rdf
 2 4
 catanneigh
 1 10 2.0
+compute_boundpolrdf
+1
+compute_clust
+1

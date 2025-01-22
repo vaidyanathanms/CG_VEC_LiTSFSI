@@ -1,5 +1,5 @@
 !---------------To analyze properties of polymer-ion systems---------
-!---------------Version 3: June-12-2024------------------------------
+!---------------Version 4: Jan-22-2025-------------------------------
 !---------------Parameter File: ana_params.f90-----------------------
 !********************************************************************
 
@@ -138,6 +138,14 @@ SUBROUTINE READ_ANA_IP_FILE()
 
         END DO
 
+     ELSEIF(dumchar == 'compute_boundpolrdf') THEN
+        
+        READ(anaread,*,iostat=ierr) bfrdf_calc
+
+     ELSEIF(dumchar == 'compute_clust') THEN
+
+        READ(anaread,*,iostat=ierr) clust_calc
+
      ELSEIF(dumchar == 'compute_rg') THEN
 
         rgcalc = 1
@@ -187,6 +195,7 @@ SUBROUTINE DEFAULTVALUES()
   rgall = 0; rgcalc = 0; rdfcalc = 0
   ion_dynflag = 0; cion_dynflag = 0; pion_dynflag = 0
   ion_diff = 0; cion_diff = 0; pion_diff = 0
+  bfrdf_calc = 0
 
   ! Initialize iontypes
   c_iontype = -1; p_iontype = -1; iontype = -1
@@ -198,56 +207,13 @@ SUBROUTINE DEFAULTVALUES()
   rdffreq = 0; rgfreq = 0
 
   ! Initialzie structural quantities
-  rdomcut = 0;  rmaxbin = 0
+  rdomcut = 10.0;  rmaxbin = 100; rbinval = REAL(rdomcut)&
+       &/REAL(rmaxbin)
 
   ! Initialize structural averages
   rvolavg = 0; rgavg = 0
 
 END SUBROUTINE DEFAULTVALUES
-
-!--------------------------------------------------------------------
-
-SUBROUTINE SANITY_CHECK_IONTYPES()
-
-  USE ANALYZE_PARAMS
-
-  IMPLICIT NONE
-
-  IF(ion_dynflag .OR. catan_neighcalc) THEN
-
-     IF(iontype == -1) THEN
-        
-        PRINT *, "ion type undefined for neigh or diff calculation"
-        STOP 
-
-     END IF
-
-  END IF
-
-  IF(cion_dynflag .OR. catan_neighcalc) THEN
-
-     IF(c_iontype == -1) THEN
-        
-        PRINT *, "counter-ion type undefined for neigh or diff calculation"
-        STOP 
-
-     END IF
-
-  END IF
-
-  IF(pion_dynflag) THEN
-
-     IF(p_iontype == -1) THEN
-        
-        PRINT *, "polymer-ion type undefined for diff calculation"
-        STOP 
-
-     END IF
-
-  END IF
-
-
-END SUBROUTINE SANITY_CHECK_IONTYPES
 
 !--------------------------------------------------------------------
 
@@ -655,36 +621,6 @@ END SUBROUTINE ANALYZE_TRAJECTORYFILE
 
 !--------------------------------------------------------------------
 
-SUBROUTINE OPEN_STRUCT_OUTPUT_FILES()
-
-  USE ANALYZE_PARAMS
-
-  IMPLICIT NONE
-
-  IF(rgcalc) THEN
-     
-     IF(rgavg) THEN
-        dum_fname = "rgavg_"//trim(adjustl(traj_fname))
-        OPEN(unit = rgavgwrite,file =trim(dum_fname),action="write"&
-             &,status="replace")
-        WRITE(rgavgwrite,'(A5,1X,4(A3,1X))') "tstep", "rgt","rgx","&
-             &rgy","rgz"
-
-     END IF
-
-     IF(rgall) THEN
-        dum_fname = "rgall_"//trim(adjustl(traj_fname))
-        OPEN(unit = rgwrite,file =trim(dum_fname),action="write"&
-             &,status="replace")
-     END IF
- 
-  END IF
-
-   
-END SUBROUTINE OPEN_STRUCT_OUTPUT_FILES
-
-!--------------------------------------------------------------------
-
 SUBROUTINE STRUCT_INIT()
 
   USE ANALYZE_PARAMS
@@ -719,8 +655,6 @@ SUBROUTINE STRUCT_INIT()
 
   END IF
 
-
-
 END SUBROUTINE STRUCT_INIT
 
 !--------------------------------------------------------------------
@@ -754,8 +688,414 @@ SUBROUTINE STRUCT_MAIN(tval)
      
   END IF
 
+  IF(bfrdf_calc) THEN
+     
+     IF(tval == 1) THEN
+        rdf_p_fb = 0.0; rdf_p_ff=0.0; rdf_p_bb = 0.0        
+        CALL SYSTEM_CLOCK(t1,clock_rate,clock_max)
+        CALL  SORT_POLY_FREE_BOUND_COMPLEX()
+        CALL SYSTEM_CLOCK(t2,clock_rate,clock_max)
+        PRINT *, 'Elapsed real time for bound/free RDF= ',REAL(t2&
+             &-t1)/REAL(clock_rate)           
+     END IF
+     
+     IF(mod(tval,rdffreq) == 0) CALL SORT_POLY_FREE_BOUND_COMPLEX()
+     
+  END IF
+
+  IF(clust_calc) THEN
+
+     IF(tval == 1) THEN
+
+        clust_avg = 0
+        CALL SYSTEM_CLOCK(t1,clock_rate,clock_max)
+        CALL CLUSTER_ANALYSIS(tval)
+        CALL SYSTEM_CLOCK(t2,clock_rate,clock_max)
+        PRINT *, 'Elapsed real time for Cluster Analysis= ',REAL(t2&
+             &-t1)/REAL(clock_rate)           
+     ELSE
+        
+        CALL CLUSTER_ANALYSIS(tval)
+     
+     END IF
+
+  END IF
+
 
 END SUBROUTINE STRUCT_MAIN
+
+!--------------------------------------------------------------------
+! pion_type is set to -1 in the beginning and is read if and only if
+! pion_dynflag is activated
+SUBROUTINE SORTALLARRAYS()
+
+  USE ANALYZE_PARAMS
+
+  IMPLICIT NONE
+
+  INTEGER :: i,j,a1type,cnt,AllocateStatus,ntotion_cnt
+  INTEGER, DIMENSION(1:ntotatoms,2) :: dumsortarr,dumcionarr&
+       &,dumpionarr
+
+  dumsortarr = -1; dumcionarr = -1; dumpionarr = -1
+  cnt = 0
+  ntotion_cnt = 0
+
+  DO i = 1,ntotatoms
+
+     a1type = aidvals(i,3)
+
+     IF(a1type == iontype) THEN
+        ioncnt = ioncnt + 1
+        dumsortarr(ioncnt,1) = i
+        dumsortarr(ioncnt,2) = a1type
+
+     ELSEIF(a1type == c_iontype) THEN
+        c_ioncnt = c_ioncnt + 1
+        dumcionarr(c_ioncnt,1) = i
+        dumcionarr(c_ioncnt,2) = a1type
+
+     ELSEIF(a1type == p_iontype) THEN
+        p_ioncnt = p_ioncnt + 1
+        dumpionarr(p_ioncnt,1) = i
+        dumpionarr(p_ioncnt,2) = a1type
+
+     END IF
+
+  END DO
+
+  IF(catan_neighcalc .OR. ion_dynflag .OR. cion_dynflag) THEN
+     PRINT *, "Number of atoms of ion type: ", ioncnt
+     PRINT *, "Number of atoms of cntion type: ", c_ioncnt
+     
+     ALLOCATE(ionarray(ioncnt,2),stat = AllocateStatus)
+     IF(AllocateStatus/=0) STOP "did not allocate ionarray"
+     ALLOCATE(counterarray(c_ioncnt,2),stat = AllocateStatus)
+     IF(AllocateStatus/=0) STOP "did not allocate ionarray"
+  
+     ! Load ion array
+
+     i = 0
+
+     DO WHILE(dumsortarr(i+1,1) .NE. -1) 
+
+        i = i + 1
+        ionarray(i,1) = dumsortarr(i,1)
+        ionarray(i,2) = dumsortarr(i,2)
+        
+     END DO
+
+     IF(i .NE. ioncnt) THEN
+        PRINT *, i, ioncnt
+        STOP "Wrong total count in ionarray"
+     END IF
+     
+     DO i = 1,ioncnt
+     
+        IF(ionarray(i,1) == -1 .OR. ionarray(i,2) == -1) THEN
+           
+           PRINT *, i,ionarray(i,1), ionarray(i,2)
+           PRINT *, "Something wrong in assigning ionarray"
+           STOP
+           
+        END IF
+        
+        IF(ionarray(i,2) .NE. iontype) THEN
+           
+           PRINT *, i,ionarray(i,1), ionarray(i,2)
+           PRINT *, "Something wrong in ionarray type"
+           STOP
+           
+        END IF
+        
+     END DO
+         
+     OPEN(unit = 93,file="iontypelist.txt",action="write",status="replace&
+          &")
+     
+     WRITE(93,*) "Reference type/count: ", iontype, ioncnt
+     
+     DO i = 1,ioncnt
+        WRITE(93,'(3(I0,1X))') i, ionarray(i,1), ionarray(i,2)
+     END DO
+     
+     CLOSE(93)
+     
+     ! Load counterion array
+     
+     i = 0
+     
+     DO WHILE(dumcionarr(i+1,1) .NE. -1) 
+        
+        i = i + 1
+        counterarray(i,1) = dumcionarr(i,1)
+        counterarray(i,2) = dumcionarr(i,2)
+        
+     END DO
+     
+     IF(i .NE. c_ioncnt) THEN
+        PRINT *, i, c_ioncnt
+        STOP "Wrong total count in counterarray"
+     END IF
+     
+     DO i = 1,c_ioncnt
+        
+        IF(counterarray(i,1) == -1 .OR. counterarray(i,2) == -1) THEN
+           
+           PRINT *, i,counterarray(i,1), counterarray(i,2)
+           PRINT *, "Something wrong in assigning counterarray"
+           STOP
+           
+        END IF
+        
+        IF(counterarray(i,2) .NE. c_iontype) THEN
+           
+           PRINT *, i,counterarray(i,1), counterarray(i,2)
+           PRINT *, "Something wrong in counterionarray type"
+           STOP
+           
+        END IF
+        
+     END DO
+     
+     
+     OPEN(unit = 93,file="cntionlist.txt",action="write",status="repl&
+          &ace")
+     
+     WRITE(93,*) "Reference type/count: ", c_iontype, c_ioncnt
+     
+     DO i = 1,c_ioncnt
+        
+        WRITE(93,'(3(I0,1X))') i, counterarray(i,1), counterarray(i,2)
+        
+     END DO
+     
+     CLOSE(93)
+  
+  ELSE
+
+     ALLOCATE(ionarray(1,2),stat = AllocateStatus)
+     DEALLOCATE(ionarray)
+     ALLOCATE(counterarray(1,2),stat = AllocateStatus)
+     DEALLOCATE(counterarray)
+
+  END IF
+
+  ! Cluster calc requires to add iontype and c_iontype in same array
+  IF (clust_calc) THEN
+
+     ntotion_centers = ioncnt + c_ioncnt
+     PRINT *, "Total number of ion centers= ", ntotion_centers
+     cnt = 0
+
+     ALLOCATE(allionids(ntotion_centers,2),stat = AllocateStatus)
+     IF(AllocateStatus/=0) STOP "did not allocate allionids"
+     ALLOCATE(clust_avg(ntotion_centers),stat = AllocateStatus)
+     IF(AllocateStatus/=0) STOP "did not allocate clust_avg"
+
+     allionids = 0 ! Initial allocation
+
+     DO i = 1,ntotatoms
+
+        a1type = aidvals(i,3)
+
+        IF(a1type == iontype .OR. a1type == c_iontype) THEN
+           
+           allionids(cnt,1) = i
+           allionids(cnt,2) = a1type
+           cnt = cnt + 1
+
+        END IF
+
+     END DO
+
+  ELSE
+
+     ALLOCATE(allionids(1,2),stat = AllocateStatus)
+     DEALLOCATE(allionids)
+     ALLOCATE(clust_avg(1),stat = AllocateStatus)
+     DEALLOCATE(polyionarray)
+
+  END IF
+     
+
+  ! Polymerion array required only for diffusion systems
+  IF (pion_dynflag .OR. bfrdf_calc) THEN
+
+     PRINT *, "Number of atoms of polyion type: ",p_ioncnt
+
+     ALLOCATE(polyionarray(p_ioncnt,2),stat = AllocateStatus)
+     IF(AllocateStatus/=0) STOP "did not allocate polyionarray"
+
+     i = 0
+
+     DO WHILE(dumpionarr(i+1,1) .NE. -1) 
+
+        i = i + 1
+        polyionarray(i,1) = dumpionarr(i,1)
+        polyionarray(i,2) = dumpionarr(i,2)
+     
+     END DO
+     
+     IF(i .NE. p_ioncnt) THEN
+        PRINT *, i, p_ioncnt
+        STOP "Wrong total count in counterarray"
+     END IF
+     
+     DO i = 1,p_ioncnt
+     
+        IF(polyionarray(i,1) == -1 .OR. polyionarray(i,2) == -1) THEN
+           
+           PRINT *, i,polyionarray(i,1), polyionarray(i,2)
+           PRINT *, "Something wrong in assigning polyionarray"
+           STOP
+           
+        END IF
+     
+        IF(polyionarray(i,2) .NE. p_iontype) THEN
+        
+           PRINT *, i,polyionarray(i,1), polyionarray(i,2)
+           PRINT *, "Something wrong in polyionarray"
+           STOP
+           
+        END IF
+     
+     END DO
+  
+     
+     OPEN(unit = 93,file="polyionlist.txt",action="write",status="repl&
+          &ace")
+  
+     WRITE(93,*) "Reference type/count: ", p_iontype, p_ioncnt
+     
+     DO i = 1,p_ioncnt
+        
+        WRITE(93,'(3(I0,1X))') i,polyionarray(i,1), polyionarray(i,2)
+        
+     END DO
+     
+     CLOSE(93)
+
+  ELSE
+
+     ALLOCATE(polyionarray(1,2),stat = AllocateStatus)
+     DEALLOCATE(polyionarray)
+
+  END IF
+
+END SUBROUTINE SORTALLARRAYS
+
+!--------------------------------------------------------------------
+
+SUBROUTINE SANITY_CHECK_IONTYPES()
+
+  USE ANALYZE_PARAMS
+
+  IMPLICIT NONE
+
+  IF(ion_dynflag .OR. catan_neighcalc) THEN
+
+     IF(iontype == -1) THEN
+        
+        PRINT *, "ion type undefined for neigh or diff calculation"
+        STOP 
+
+     END IF
+
+  END IF
+
+  IF(cion_dynflag .OR. catan_neighcalc) THEN
+
+     IF(c_iontype == -1) THEN
+        
+        PRINT *, "counter-ion type undefined for neigh or diff calculation"
+        STOP 
+
+     END IF
+
+  END IF
+
+  IF(pion_dynflag) THEN
+
+     IF(p_iontype == -1) THEN
+        
+        PRINT *, "polymer-ion type undefined for diff calculation"
+        STOP 
+
+     END IF
+
+  END IF
+
+
+END SUBROUTINE SANITY_CHECK_IONTYPES
+
+!--------------------------------------------------------------------
+
+SUBROUTINE MAP_REFTYPE(jin,atype,jout)
+! Maps atomid into the corresponding place in array
+  USE ANALYZE_PARAMS
+
+  IMPLICIT NONE
+
+  INTEGER :: i
+  INTEGER, INTENT(IN):: jin,atype
+  INTEGER, INTENT(OUT) :: jout
+
+  jout = -1
+
+  IF(atype == iontype) THEN
+
+     DO i = 1,ioncnt
+        
+        IF(jin == ionarray(i,1)) THEN
+
+           jout = i
+
+           EXIT
+
+        END IF
+
+     END DO
+
+  ELSEIF(atype == c_iontype) THEN
+
+     DO i = 1,c_ioncnt
+        
+        IF(jin == counterarray(i,1)) THEN
+
+           jout = i
+
+           EXIT
+
+        END IF
+
+     END DO
+
+  ELSEIF(atype == p_iontype) THEN
+
+     DO i = 1,p_ioncnt
+        
+        IF(jin == polyionarray(i,1)) THEN
+           
+           jout = i
+
+           EXIT
+           
+        END IF
+        
+     END DO
+
+  END IF
+  
+  IF(jout == -1) THEN
+     
+     PRINT *, jin, atype
+     STOP "Could not find a match"
+
+  END IF
+
+
+END SUBROUTINE MAP_REFTYPE
 
 !--------------------------------------------------------------------
 
@@ -879,18 +1219,6 @@ END SUBROUTINE CAT_AN_NEIGHS
 
 !--------------------------------------------------------------------
 
-SUBROUTINE DYNAMICS_MAIN()
-
-  USE ANALYZE_PARAMS
-  IMPLICIT NONE
-
-  IF(ion_diff) CALL DIFF_IONS()
-  IF(cion_diff) CALL DIFF_COUNTERIONS()
-
-END SUBROUTINE DYNAMICS_MAIN
-
-!--------------------------------------------------------------------
-
 SUBROUTINE COMPUTE_RDF(iframe)
 
   USE ANALYZE_PARAMS
@@ -996,7 +1324,6 @@ SUBROUTINE COMPUTE_RADGYR(iframe)
   rgsqavg = 0.0; rgxxavg = 0.0; rgyyavg = 0.0; rgzzavg = 0.0
   rxcm = 0.0; rycm = 0.0; rzcm = 0.0
   totmass = 0.0
-
 
   IF(iframe == 1) THEN
      IF(polyflag == 0 .OR. npoly_types == 0) STOP "ERROR: No polymer t&
@@ -1136,442 +1463,644 @@ END SUBROUTINE COMPUTE_RADGYR
 
 !--------------------------------------------------------------------
 
-SUBROUTINE ALLOUTPUTS()
+SUBROUTINE CLUSTER_ANALYSIS(frnum)
 
   USE ANALYZE_PARAMS
-  IMPLICIT NONE
-  INTEGER :: i
 
-  PRINT *, "Number of frames from start to end: ", nframes/(freqfr+1)
-  PRINT *, "Frequency of Frames: ", freqfr + 1
-  PRINT *, "Total number of Frames analyzed: ", nfrcntr
-
-  WRITE(logout,*) "Number of frames from start to end: ", nframes&
-       &/(freqfr+1)
-  WRITE(logout,*) "Frequency of Frames: ", freqfr+1
-  WRITE(logout,*) "Total number of Frames analyzed: ", nfrcntr
-
-  IF(rdfcalc) THEN
-     PRINT *, "Writing RDFs .."
-     CALL OUTPUT_ALLRDF()
-  END IF
-
-  IF(catan_neighcalc) THEN
-     PRINT *, "Writing neighbors .."
-     CALL OUTPUT_ALLNEIGHBORS()
-  END IF
-
-
-END SUBROUTINE ALLOUTPUTS
-
-!--------------------------------------------------------------------
-
-SUBROUTINE OUTPUT_ALLRDF()
-
-  USE ANALYZE_PARAMS
   IMPLICIT NONE
 
-  INTEGER :: i,j,ierr
-  REAL, PARAMETER :: vconst = 4.0*pival/3.0
-  REAL :: rlower,rupper,nideal,rdffrnorm,acrnorm
-  
-  IF(rdfcalc) THEN
+!Ref Sevick et.al ., J Chem Phys 88 (2)
 
-     rdffrnorm = INT(nfrcntr/rdffreq)
-     rvolavg = rvolavg/REAL(rdffrnorm)
-     PRINT *, "Average volume of box", rvolavg
+  INTEGER :: i,j,k,a2ptr,a1id,a2id,itype,jtype,jptr,idum,jflag,jcnt&
+       &,iflag,jtot,jind,jprev
+  INTEGER, DIMENSION(ntotion_centers,ntotion_centers) :: all_direct&
+       &,catan_direct,all_neigh,catan_neigh
+  INTEGER, DIMENSION(1:ntotion_centers) :: union_all,flag_catan,scnt&
+       &,all_linked
+  REAL :: rxval, ryval, rzval, rval
+  INTEGER, INTENT(IN) :: frnum
+
+!$OMP PARALLEL SHARED(catan_direct,catan_neigh)
+
+!$OMP DO PRIVATE(i,j)
+  DO i = 1,ntotion_centers
+
+     scnt(i) = 0; all_linked(i)  = 0
+     union_all(i) = -1; flag_catan(i) = -1
+
+     DO j = 1,ntotion_centers
+
+        IF(i .NE. j) THEN
+           all_direct(i,j) = 0
+           catan_direct(i,j) = 0
+        END IF
+
+        IF(i == j) THEN
+           all_direct(i,j) = 1
+           catan_direct(i,j) = 0
+        END IF
+
+        all_neigh(i,j) = 0
+!        catan_neigh(i,j) = 0
+
+     END DO
+
+  END DO
+!$OMP END DO
+
+!Create Direct connectivity matrix
+!allneigh - does not distinguish between Li and P neigh
+!catan_neigh - neighbors with sequence cat-an-cat-an.. or an-cat-an-cat...
+
+!$OMP DO PRIVATE(i,j,a1id,a2ptr,a2id,rxval,ryval,rzval,rval,itype&
+!$OMP& ,jptr,jtype)  
+  DO i = 1,ntotion_centers
      
-     dum_fname = "rdf_"//trim(adjustl(traj_fname))
-     OPEN(unit = dumwrite,file =trim(dum_fname),action="write"&
-          &,status="replace",iostat=ierr)
+     a1id = allionids(i,1)
+     a2ptr = 1
+     itype = aidvals(a1id,3)
+     jptr  = 1
+     all_neigh(i,i) = a1id
      
-     IF(ierr /= 0) THEN
-        PRINT *, "Could not open", trim(dum_fname)
-     END IF
-     
-     WRITE(dumwrite,'(A,2X)',advance="no") "r"
-     
-     DO j = 1,npairs
+     DO j = 1,ntotion_centers
         
-        WRITE(dumwrite,'(2(I0,1X))',advance="no") pairs_rdf(j,1)&
-             &,pairs_rdf(j,2)
+        a2id = allionids(j,1)
         
+        rxval = rxyz_lmp(a1id,1) - rxyz_lmp(a2id,1) 
+        ryval = rxyz_lmp(a1id,2) - rxyz_lmp(a2id,2) 
+        rzval = rxyz_lmp(a1id,3) - rxyz_lmp(a2id,3) 
+        
+        rxval = rxval - box_xl*ANINT(rxval/box_xl)
+        ryval = ryval - box_yl*ANINT(ryval/box_yl)
+        rzval = rzval - box_zl*ANINT(rzval/box_zl)
+        
+        rval = sqrt(rxval**2 + ryval**2 + rzval**2)
+
+        IF(rval .LT. rneigh_cut .AND. a1id .NE. a2id) THEN
+           
+           all_direct(i,j) = 1
+           all_neigh(i,j)  = a2id
+!           all_neigh(i,a2ptr) = a2id
+!           a2ptr = a2ptr + 1
+           
+           jtype = aidvals(a2id,3)
+           
+           IF(itype .NE. jtype) THEN
+              
+              catan_direct(i,j) = 1
+!              catan_neigh(i,j)  = a2id
+!              catan_neigh(i,jptr+1) = a2id
+              itype = jtype
+!              jptr  = jptr + 1
+              
+           END IF
+           
+        END IF
+
      END DO
      
-     WRITE(dumwrite,*)
+  END DO
+!$OMP END DO  
+
+!Check for symmetry
+  IF(frnum == 1) THEN
+!$OMP DO
+     DO i = 1,ntotion_centers
+
+        DO j = 1,ntotion_centers
+
+           IF(all_direct(i,j) .NE. all_direct(j,i)) STOP "Unsymmetric&
+                & all_direct"
+
+          IF(all_neigh(i,j) .NE. 0) THEN
+
+              IF(all_neigh(i,j) .NE. all_neigh(j,j) .OR. all_neigh(j&
+                   &,i) .NE. all_neigh(i,i)) THEN
+
+                 PRINT *, i,j,all_direct(i,j),all_direct(j,i)&
+                      &,all_neigh(j,i),all_neigh(i,i)
+                 STOP "Unsymmetric neighbor list"
+                 
+              END IF
+              
+           END IF
+
+        END DO
+
+     END DO
+!$OMP END DO
+  END IF
+
+!$OMP END PARALLEL        
+
+
+!Intersection
+
+  DO i = 1,ntotion_centers-1 !Ref row counter
+
+     iflag = 0
+     idum  = i
+
+     DO WHILE(iflag == 0 .AND. union_all(i) == -1)
      
-     DO i = 0,rmaxbin-1
+        jflag = 0
+        k    = 1 !Column counter
+        j    = idum+1 !Other row counter
         
-        rlower = real(i)*rbinval
-        rupper = rlower + rbinval
-        nideal = vconst*(rupper**3 - rlower**3)
-        
-        WRITE(dumwrite,'(F16.5,2X)',advance="no") 0.5*rbinval*(REAL(2*i&
-             &+1))
-        
-        DO j = 1,npairs
+        DO WHILE(jflag == 0 .AND. k .LE. ntotion_centers) 
            
-           WRITE(dumwrite,'(F16.9,1X)',advance="no")rdfarray(i,j)&
-                &/(rdffrnorm*nideal)
+           IF((all_direct(i,k) == all_direct(j,k)).AND. all_direct(i&
+                &,k)== 1) THEN
+              
+              jflag = 1
+!!$              jprev = 0
+
+              DO jcnt = 1,ntotion_centers
+               
+                 
+!!$                 IF(all_direct(j,jcnt) == 1) jprev = 1
+
+                 !Replace highest row by union of two rows
+
+                 all_direct(j,jcnt) = all_direct(i,jcnt) .OR.&
+                      & all_direct(j,jcnt)
+
+!!$                 IF((all_direct(j,jcnt) == 1 .AND. all_direct(i,jcnt)&
+!!$                      &==1) .AND. jprev == 0) THEN
+!!$                    
+!!$                    all_neigh(j,jcnt) = all_neigh(i,jcnt)
+!!$                    jprev = 0 !Other condition is already
+!!$                    ! incorporated before
+!!$                 END IF
+!!$                 
+              END DO
+              
+              union_all(i) = 1 !One match implies the low ranked row
+              ! is present in high ranked row
+              
+           ELSE
+              
+              k = k + 1
+              
+           END IF
            
         END DO
         
-        WRITE(dumwrite,*)
+        IF(union_all(i) == 1) THEN
+           
+           iflag = 1
+           
+        ELSE
+           
+           idum  = idum + 1
+           
+        END IF
         
+        IF(idum == ntotion_centers) iflag = 1
+
      END DO
-     
-     CLOSE(dumwrite)
 
-  END IF
-
-END SUBROUTINE OUTPUT_ALLRDF
-
-!--------------------------------------------------------------------
-
-SUBROUTINE OUTPUT_ALLNEIGHBORS()
-
-  USE ANALYZE_PARAMS
-
-  IMPLICIT NONE
-
-  INTEGER :: i,frnorm,ierr
-  REAL :: totcat_an_neigh,totan_cat_neigh
-
-  IF(neighfreq == 1) frnorm = nframes
-  IF(neighfreq .NE. 1) frnorm = nframes/neighfreq + 1
-
-  totcat_an_neigh = 0.0; totan_cat_neigh = 0.0
-
-  IF(catan_neighcalc) THEN
-!$OMP PARALLEL DO REDUCTION(+:totcat_an_neigh,totan_cat_neigh) PRIVATE(i)
+  END DO
   
-     DO i = 1,maxneighsize
+!Count
+  jtot = 0
+!$OMP PARALLEL PRIVATE(i,j,jind) 
+!$OMP DO
+  DO i = 1,ntotion_centers
 
-        totcat_an_neigh = totcat_an_neigh + REAL(cat_an_neighavg(i))
-        totan_cat_neigh = totan_cat_neigh + REAL(an_cat_neighavg(i))
-
-     END DO
-
-!$OMP END PARALLEL DO
-
-     IF(catan_neighcalc) THEN
+     IF(union_all(i) == -1) THEN
         
-        dum_fname = "catanneigh_"//trim(adjustl(traj_fname))
-        OPEN(unit = dumwrite,file =trim(dum_fname),action="write"&
-             &,status="replace")
+        jind = 0
 
-        
+        DO j = 1,ntotion_centers
+
+           IF(all_direct(i,j) == 1) jind = jind + 1
+
+        END DO
+
+        scnt(jind) = scnt(jind) + 1
+        all_linked(i) = jind
+
      END IF
-
      
-     DO i = 1,maxneighsize     
+  END DO
+!$OMP END DO
 
-        WRITE(dumwrite,'(I0,1X,4(F14.8,1X))') i,&
-             & REAL(cat_an_neighavg(i))/REAL(frnorm),100.0&
-             &*REAL(cat_an_neighavg(i))/totcat_an_neigh&
-             &,REAL(an_cat_neighavg(i))/REAL(frnorm),100.0&
-             &*REAL(an_cat_neighavg(i))/totan_cat_neigh
+!$OMP DO
 
-     END DO
+  DO i = 1,ntotion_centers
 
-     CLOSE(dumwrite)
+     clust_avg(i) = clust_avg(i) + scnt(i)
 
+  END DO
+!$OMP END DO
+
+!$OMP END PARALLEL
+
+  IF(frnum == 1) THEN
+     OPEN(unit =90,file ="scnt.txt",action="write",status="replace")  
   END IF
 
-END SUBROUTINE OUTPUT_ALLNEIGHBORS
+  jtot = 0
+  
+  DO i = 1,ntotion_centers
      
+     IF(frnum == 1) WRITE(90,*) i,scnt(i)
+     jtot = jtot + all_linked(i)
+     
+  END DO
+  
+  IF(jtot .NE. ntotion_centers) THEN
+     
+     PRINT *, "Sum of ions not equal to total ion centers"
+     PRINT *, jtot, ntotion_centers
+     STOP
+     
+  END IF
+
+  IF(frnum == 1) CLOSE(90)
+  
+  IF(frnum == 1) THEN
+
+     OPEN(unit =90,file ="all_neigh.txt",action="write",status="replace")  
+    
+     DO i = 1,ntotion_centers
+        
+        IF(union_all(i) == -1) THEN
+           
+           WRITE(90,*) i,all_linked(i)
+        
+           DO j = 1,ntotion_centers
+           
+              IF(all_direct(i,j) == 1) WRITE(90,*) j,allionids(j,1),&
+                   & allionids(j,2),all_direct(i,j)
+           
+           END DO
+
+        END IF
+        
+     END DO
+
+     CLOSE(90)
+
+  END IF
+  
+END SUBROUTINE CLUSTER_ANALYSIS
+
 !--------------------------------------------------------------------
-! pion_type is set to -1 in the beginning and is read if and only if
-! pion_dynflag is activated
-SUBROUTINE SORTALLARRAYS()
+
+SUBROUTINE SORT_POLY_FREE_BOUND_COMPLEX()
 
   USE ANALYZE_PARAMS
 
   IMPLICIT NONE
 
-  INTEGER :: i,j,a1type,cnt,AllocateStatus
-  INTEGER, DIMENSION(1:ntotatoms,2) :: dumsortarr,dumcionarr&
-       &,dumpionarr
+  INTEGER :: i,j,a1id,a2id,boundflag,pcnt,catcnt,tid,cnt
+  INTEGER :: pfree,pbound,pboundtot,pfreetot,AllocateStatus
+  REAL :: rxval,ryval,rzval,rval
+  INTEGER, DIMENSION(1:p_ioncnt,0:nproc-1) :: polbounddum,polfreedum
 
-  dumsortarr = -1; dumcionarr = -1; dumpionarr = -1
-  cnt = 0
+ pfree = 0; pbound = 0; pboundtot=0; pfreetot=0;catcnt = 1
 
-  DO i = 1,ntotatoms
+!$OMP PARALLEL
+!$OMP DO PRIVATE(i,j)
+  DO i = 1,p_ioncnt
+     
+     DO j = 0,nproc-1
+        
+        polbounddum(i,j) = -1
+        polfreedum(i,j)  = -1
 
-     a1type = aidvals(i,3)
+     END DO
 
-     IF(a1type == iontype) THEN
-        ioncnt = ioncnt + 1
-        dumsortarr(ioncnt,1) = i
-        dumsortarr(ioncnt,2) = a1type
+  END DO
+!$OMP END DO
 
-     ELSEIF(a1type == c_iontype) THEN
-        c_ioncnt = c_ioncnt + 1
-        dumcionarr(c_ioncnt,1) = i
-        dumcionarr(c_ioncnt,2) = a1type
+!$OMP DO PRIVATE(pcnt,a1id,boundflag,a2id,rxval,ryval,rzval,rval,tid)& 
+!$OMP& REDUCTION(+:pboundtot,pfreetot) FIRSTPRIVATE(pfree,pbound,catcnt)
+  DO pcnt = 1,p_ioncnt
 
-     ELSEIF(a1type == p_iontype) THEN
-        p_ioncnt = p_ioncnt + 1
-        dumpionarr(p_ioncnt,1) = i
-        dumpionarr(p_ioncnt,2) = a1type
+     tid  = OMP_GET_THREAD_NUM()
+     a1id = polyionarray(pcnt,1)
+     catcnt = 1
+     boundflag = 0
+
+     DO WHILE(catcnt .LE. ioncnt)
+     
+        a2id  = ionarray(catcnt,1)
+
+        rxval = rxyz_lmp(a1id,1) - rxyz_lmp(a2id,1) 
+        ryval = rxyz_lmp(a1id,2) - rxyz_lmp(a2id,2) 
+        rzval = rxyz_lmp(a1id,3) - rxyz_lmp(a2id,3) 
+        
+        rxval = rxval - box_xl*ANINT(rxval/box_xl)
+        ryval = ryval - box_yl*ANINT(ryval/box_yl)
+        rzval = rzval - box_zl*ANINT(rzval/box_zl)
+        
+        rval = sqrt(rxval**2 + ryval**2 + rzval**2)
+
+        IF(rval .LT. rneigh_cut) THEN
+
+           pbound = pbound + 1
+           pboundtot = pboundtot + 1
+           polbounddum(pbound,tid) = a1id
+           catcnt = ioncnt + 1
+           boundflag = 1
+
+        ELSE
+           
+           catcnt = catcnt + 1
+
+        END IF
+
+     END DO
+           
+     IF(boundflag == 0) THEN
+
+        pfree = pfree + 1
+        pfreetot = pfreetot + 1
+        polfreedum(pfree,tid) = a1id
 
      END IF
 
   END DO
+!$OMP END DO
+!$OMP END PARALLEL
 
-  IF(catan_neighcalc .OR. ion_dynflag .OR. cion_dynflag) THEN
-     PRINT *, "Number of atoms of ion type: ", ioncnt
-     PRINT *, "Number of atoms of cntion type: ", c_ioncnt
-     
-     ALLOCATE(ionarray(ioncnt,2),stat = AllocateStatus)
-     IF(AllocateStatus/=0) STOP "did not allocate ionarray"
-     ALLOCATE(counterarray(c_ioncnt,2),stat = AllocateStatus)
-     IF(AllocateStatus/=0) STOP "did not allocate ionarray"
-  
-     ! Load ion array
+  IF(pboundtot == 0 .OR. pfreetot == 0) THEN
 
-     i = 0
-
-     DO WHILE(dumsortarr(i+1,1) .NE. -1) 
-
-        i = i + 1
-        ionarray(i,1) = dumsortarr(i,1)
-        ionarray(i,2) = dumsortarr(i,2)
-        
-     END DO
-
-     IF(i .NE. ioncnt) THEN
-        PRINT *, i, ioncnt
-        STOP "Wrong total count in ionarray"
-     END IF
-     
-     DO i = 1,ioncnt
-     
-        IF(ionarray(i,1) == -1 .OR. ionarray(i,2) == -1) THEN
-           
-           PRINT *, i,ionarray(i,1), ionarray(i,2)
-           PRINT *, "Something wrong in assigning ionarray"
-           STOP
-           
-        END IF
-        
-        IF(ionarray(i,2) .NE. iontype) THEN
-           
-           PRINT *, i,ionarray(i,1), ionarray(i,2)
-           PRINT *, "Something wrong in ionarray type"
-           STOP
-           
-        END IF
-        
-     END DO
-     
-     
-     OPEN(unit = 93,file="iontypelist.txt",action="write",status="replace&
-          &")
-     
-     WRITE(93,*) "Reference type/count: ", iontype, ioncnt
-     
-     DO i = 1,ioncnt
-        WRITE(93,'(3(I0,1X))') i, ionarray(i,1), ionarray(i,2)
-     END DO
-     
-     CLOSE(93)
-     
-     ! Load counterion array
-     
-     i = 0
-     
-     DO WHILE(dumcionarr(i+1,1) .NE. -1) 
-        
-        i = i + 1
-        counterarray(i,1) = dumcionarr(i,1)
-        counterarray(i,2) = dumcionarr(i,2)
-        
-     END DO
-     
-     IF(i .NE. c_ioncnt) THEN
-        PRINT *, i, c_ioncnt
-        STOP "Wrong total count in counterarray"
-     END IF
-     
-     DO i = 1,c_ioncnt
-        
-        IF(counterarray(i,1) == -1 .OR. counterarray(i,2) == -1) THEN
-           
-           PRINT *, i,counterarray(i,1), counterarray(i,2)
-           PRINT *, "Something wrong in assigning counterarray"
-           STOP
-           
-        END IF
-        
-        IF(counterarray(i,2) .NE. c_iontype) THEN
-           
-           PRINT *, i,counterarray(i,1), counterarray(i,2)
-           PRINT *, "Something wrong in counterionarray type"
-           STOP
-           
-        END IF
-        
-     END DO
-     
-     
-     OPEN(unit = 93,file="cntionlist.txt",action="write",status="repl&
-          &ace")
-     
-     WRITE(93,*) "Reference type/count: ", c_iontype, c_ioncnt
-     
-     DO i = 1,c_ioncnt
-        
-        WRITE(93,'(3(I0,1X))') i, counterarray(i,1), counterarray(i,2)
-        
-     END DO
-     
-     CLOSE(93)
-  
-  ELSE
-
-     ALLOCATE(ionarray(1,2),stat = AllocateStatus)
-     DEALLOCATE(ionarray)
-     ALLOCATE(counterarray(1,2),stat = AllocateStatus)
-     DEALLOCATE(counterarray)
+     PRINT *, "Zero pboundtot/pfreetot"
+     PRINT *, pboundtot, pfreetot
+     STOP
 
   END IF
 
+  ALLOCATE(polboundarr(1:pboundtot),stat = AllocateStatus)
+  IF(AllocateStatus/=0) STOP "did not allocate polboundarr"
 
-  ! Polymerion array required only for diffusion systems
-
-  IF (pion_dynflag) THEN
-
-     PRINT *, "Number of atoms of polyion type: ",p_ioncnt
-
-     ALLOCATE(polyionarray(p_ioncnt,2),stat = AllocateStatus)
-     IF(AllocateStatus/=0) STOP "did not allocate polyionarray"
-
-     i = 0
-
-     DO WHILE(dumpionarr(i+1,1) .NE. -1) 
-
-        i = i + 1
-        polyionarray(i,1) = dumpionarr(i,1)
-        polyionarray(i,2) = dumpionarr(i,2)
-     
-     END DO
-     
-     IF(i .NE. p_ioncnt) THEN
-        PRINT *, i, p_ioncnt
-        STOP "Wrong total count in counterarray"
-     END IF
-     
-     DO i = 1,p_ioncnt
-     
-        IF(polyionarray(i,1) == -1 .OR. polyionarray(i,2) == -1) THEN
-           
-           PRINT *, i,polyionarray(i,1), polyionarray(i,2)
-           PRINT *, "Something wrong in assigning polyionarray"
-           STOP
-           
-        END IF
-     
-        IF(polyionarray(i,2) .NE. p_iontype) THEN
-        
-           PRINT *, i,polyionarray(i,1), polyionarray(i,2)
-           PRINT *, "Something wrong in polyionarray"
-           STOP
-           
-        END IF
-     
-     END DO
+  ALLOCATE(polfreearr(1:pfreetot),stat = AllocateStatus)
+  IF(AllocateStatus/=0) STOP "did not allocate polfreearr"
   
+  pfree = 0; pbound = 0
+ 
+  DO i = 0,nproc-1
      
-     OPEN(unit = 93,file="polyionlist.txt",action="write",status="repl&
-          &ace")
-  
-     WRITE(93,*) "Reference type/count: ", p_iontype, p_ioncnt
-     
-     DO i = 1,p_ioncnt
-        
-        WRITE(93,'(3(I0,1X))') i,polyionarray(i,1), polyionarray(i,2)
-        
+     cnt = 0
+
+     DO WHILE(polfreedum(cnt+1,i) .NE. -1)
+
+        cnt = cnt + 1
+        pfree = pfree + 1
+        polfreearr(pfree) = polfreedum(cnt,i)
+
      END DO
-     
-     CLOSE(93)
+ 
+     cnt = 0
 
-  ELSE
+     DO WHILE(polbounddum(cnt+1,i) .NE. -1)
+        
+        cnt = cnt + 1
+        pbound = pbound + 1
+        polboundarr(pbound) = polbounddum(cnt,i)
 
-     ALLOCATE(polyionarray(1,2),stat = AllocateStatus)
-     DEALLOCATE(polyionarray)
+     END DO
+
+  END DO
+
+  IF(pfree .NE. pfreetot .OR. pbound .NE. pboundtot) THEN
+
+     PRINT *, "Unequal assignment in free and bound oxygens"
+     PRINT *, pfree,pfreetot,pbound,pboundtot
+     STOP
 
   END IF
 
-END SUBROUTINE SORTALLARRAYS
+  CALL FREE_BOUND_POLRDF(pfreetot,pboundtot)
+
+  DEALLOCATE(polfreearr)
+  DEALLOCATE(polboundarr)
+
+END SUBROUTINE SORT_POLY_FREE_BOUND_COMPLEX
 
 !--------------------------------------------------------------------
 
-SUBROUTINE MAP_REFTYPE(jin,atype,jout)
-! Maps atomid into the corresponding place in array
+SUBROUTINE FREE_BOUND_POLRDF(pfreetot,pboundtot)
+
   USE ANALYZE_PARAMS
 
   IMPLICIT NONE
 
-  INTEGER :: i
-  INTEGER, INTENT(IN):: jin,atype
-  INTEGER, INTENT(OUT) :: jout
+  INTEGER :: i,j,ptot,a1id,a2id,ibin
+  INTEGER :: pbound_free, pbound_bound, pfree_free
+  REAL    :: rval,rxval,ryval,rzval,rboxval
+  INTEGER,INTENT(IN) :: pfreetot,pboundtot
+  INTEGER,DIMENSION(0:rmaxbin-1) ::dumrdf_p_ff,dumrdf_p_bb,dumrdf_p_fb
 
-  jout = -1
-
-  IF(atype == iontype) THEN
-
-     DO i = 1,ioncnt
-        
-        IF(jin == ionarray(i,1)) THEN
-
-           jout = i
-
-           EXIT
-
-        END IF
-
-     END DO
-
-  ELSEIF(atype == c_iontype) THEN
-
-     DO i = 1,c_ioncnt
-        
-        IF(jin == counterarray(i,1)) THEN
-
-           jout = i
-
-           EXIT
-
-        END IF
-
-     END DO
-
-  ELSEIF(atype == p_iontype) THEN
-
-     DO i = 1,p_ioncnt
-        
-        IF(jin == polyionarray(i,1)) THEN
-           
-           jout = i
-
-           EXIT
-           
-        END IF
-        
-     END DO
-
-  END IF
+  rvolval = box_xl*box_yl*box_zl
+  IF(rdfcalc == .false.) THEN !Already in RDF. So if it is true it is
+     !already accounted in rdf computation
   
-  IF(jout == -1) THEN
+     rvolavg = rvolavg + rvolval
+  
+  END IF
+
+  ptot = pfreetot + pboundtot
+
+  pbound_free = 0; pbound_bound = 0; pfree_free = 0
+
+!$OMP PARALLEL 
+
+!$OMP DO PRIVATE(i)
+  DO i = 0,rmaxbin-1
      
-     PRINT *, jin, atype
-     STOP "Could not find a match"
+     dumrdf_p_fb(i) = 0
+     dumrdf_p_ff(i) = 0
+     dumrdf_p_bb(i) = 0
+     
+  END DO
+!$OMP END DO
+
+!$OMP DO REDUCTION(+:dumrdf_p_fb,pbound_free,pfree_free,pbound_bound)&
+!$OMP& PRIVATE(i,j,a1id,a2id,rval,rxval,ryval,rzval,ibin)
+  DO i = 1,pfreetot
+
+     a1id = polfreearr(i)
+     
+     IF(aidvals(a1id,3) .NE. 9) STOP "Wrong Oxygen atom for a1id"
+
+     DO j = i,pboundtot
+
+        a2id   = polboundarr(j)
+
+        IF(aidvals(a2id,3) .NE. 9) STOP "Wrong Oxygen atom for a2id"
+
+        rxval = rxyz_lmp(a1id,1) - rxyz_lmp(a2id,1) 
+        ryval = rxyz_lmp(a1id,2) - rxyz_lmp(a2id,2) 
+        rzval = rxyz_lmp(a1id,3) - rxyz_lmp(a2id,3) 
+        
+        rxval = rxval - box_xl*ANINT(rxval/box_xl)
+        ryval = ryval - box_yl*ANINT(ryval/box_yl)
+        rzval = rzval - box_zl*ANINT(rzval/box_zl)
+        
+        rval = sqrt(rxval**2 + ryval**2 + rzval**2)
+        ibin = FLOOR(rval/rbinval)
+
+        IF(ibin .LT. rmaxbin) THEN
+
+           dumrdf_p_fb(ibin) = dumrdf_p_fb(ibin) + 2
+           pbound_free = pbound_free  + 1
+
+        END IF
+
+     END DO
+
+  END DO
+!$OMP END DO
+
+!$OMP DO REDUCTION(+:dumrdf_p_ff,pbound_free,pfree_free,pbound_bound)&
+!$OMP& PRIVATE(i,j,a1id,a2id,rval,rxval,ryval,rzval,ibin)
+  DO i = 1,pfreetot
+
+     a1id = polfreearr(i)
+     
+     IF(aidvals(a1id,3) .NE. 9) STOP "Wrong Oxygen atom for a1id"
+
+     DO j = i+1,pfreetot
+
+        a2id   = polfreearr(j)
+
+        IF(aidvals(a2id,3) .NE. 9) STOP "Wrong Oxygen atom for a2id"
+
+        rxval = rxyz_lmp(a1id,1) - rxyz_lmp(a2id,1) 
+        ryval = rxyz_lmp(a1id,2) - rxyz_lmp(a2id,2) 
+        rzval = rxyz_lmp(a1id,3) - rxyz_lmp(a2id,3) 
+        
+        rxval = rxval - box_xl*ANINT(rxval/box_xl)
+        ryval = ryval - box_yl*ANINT(ryval/box_yl)
+        rzval = rzval - box_zl*ANINT(rzval/box_zl)
+        
+        rval = sqrt(rxval**2 + ryval**2 + rzval**2)
+        ibin = FLOOR(rval/rbinval)
+        
+        IF(ibin .LT. rmaxbin) THEN
+           
+           dumrdf_p_ff(ibin) = dumrdf_p_ff(ibin) + 2
+           pfree_free = pfree_free + 1
+           
+        END IF
+
+     END DO
+
+  END DO
+!$OMP END DO
+
+!$OMP DO REDUCTION(+:dumrdf_p_bb,pbound_free,pfree_free,pbound_bound) &
+!$OMP& PRIVATE(i,j,a1id,a2id,rval,rxval,ryval,rzval,ibin)
+  DO i = 1,pboundtot
+
+     a1id = polboundarr(i)
+     
+     IF(aidvals(a1id,3) .NE. 9) STOP "Wrong Oxygen atom for a1id"
+
+     DO j = i+1,pboundtot
+
+        a2id   = polboundarr(j)
+
+        IF(aidvals(a2id,3) .NE. 9) STOP "Wrong Oxygen atom for a2id"
+
+        rxval = rxyz_lmp(a1id,1) - rxyz_lmp(a2id,1) 
+        ryval = rxyz_lmp(a1id,2) - rxyz_lmp(a2id,2) 
+        rzval = rxyz_lmp(a1id,3) - rxyz_lmp(a2id,3) 
+        
+        rxval = rxval - box_xl*ANINT(rxval/box_xl)
+        ryval = ryval - box_yl*ANINT(ryval/box_yl)
+        rzval = rzval - box_zl*ANINT(rzval/box_zl)
+        
+        rval = sqrt(rxval**2 + ryval**2 + rzval**2)
+        ibin = FLOOR(rval/rbinval)
+        
+        IF(ibin .LT. rmaxbin) THEN
+           
+           dumrdf_p_bb(ibin) = dumrdf_p_bb(ibin) + 2
+           pbound_bound = pbound_bound + 1
+           
+        END IF
+
+     END DO
+
+  END DO
+!$OMP END DO
+
+
+!$OMP DO
+
+  DO i = 0,rmaxbin-1
+
+     rdf_p_fb(i) = rdf_p_fb(i) + REAL(dumrdf_p_fb(i))*rvolval&
+          &/(REAL(pboundtot)*REAL(pfreetot))
+     rdf_p_ff(i) = rdf_p_ff(i) + REAL(dumrdf_p_ff(i))*rvolval&
+          &/(REAL(pfreetot)*REAL(pfreetot))
+     rdf_p_bb(i) = rdf_p_bb(i) + REAL(dumrdf_p_bb(i))*rvolval&
+          &/(REAL(pboundtot)*REAL(pboundtot))
+
+  END DO
+!$OMP END DO
+!$OMP END PARALLEL
+
+END SUBROUTINE FREE_BOUND_POLRDF
+
+!--------------------------------------------------------------------
+
+SUBROUTINE DYNAMICS_MAIN()
+
+  USE ANALYZE_PARAMS
+  IMPLICIT NONE
+
+  IF(ion_diff) CALL DIFF_IONS()
+  IF(cion_diff) CALL DIFF_COUNTERIONS()
+
+END SUBROUTINE DYNAMICS_MAIN
+
+!--------------------------------------------------------------------
+
+SUBROUTINE CHECK_MOMENTUM(tval)
+
+  USE ANALYZE_PARAMS
+  IMPLICIT NONE
+
+  INTEGER, INTENT(IN) :: tval
+  INTEGER :: i,aid,atype
+  REAL :: xmom, ymom, zmom
+  REAL, PARAMETER :: tol_mom = 1e-5
+
+  xmom = 0; ymom = 0; zmom = 0
+
+  DO i = 1, ntotatoms
+     
+     aid = vel_xyz(i,1); atype = aidvals(aid,3)
+     xmom = xmom + masses(atype,1)*vel_xyz(i,2)
+     ymom = ymom + masses(atype,1)*vel_xyz(i,3)
+     zmom = zmom + masses(atype,1)*vel_xyz(i,4)
+
+  END DO
+
+  IF( (abs(xmom) .GT. tol_mom) .OR. (abs(ymom) .GT. tol_mom) .OR.&
+       & (abs(zmom) .GT. tol_mom) ) THEN
+
+     PRINT *, "WARNING: Net momentum not zero: ", tval,xmom,ymom,zmom
+
+  ELSE
+
+     IF(tval == 0) THEN
+
+        PRINT *, "Momentum conserved at the beginning: ", xmom, ymom,&
+             & zmom
+
+     END IF
 
   END IF
 
-
-END SUBROUTINE MAP_REFTYPE
+END SUBROUTINE CHECK_MOMENTUM
 
 !--------------------------------------------------------------------
 
@@ -1724,45 +2253,209 @@ END SUBROUTINE DIFF_COUNTERIONS
 
 !--------------------------------------------------------------------
 
-SUBROUTINE CHECK_MOMENTUM(tval)
+SUBROUTINE OPEN_STRUCT_OUTPUT_FILES()
+
+  USE ANALYZE_PARAMS
+
+  IMPLICIT NONE
+
+  IF(rgcalc) THEN
+     
+     IF(rgavg) THEN
+        dum_fname = "rgavg_"//trim(adjustl(traj_fname))
+        OPEN(unit = rgavgwrite,file =trim(dum_fname),action="write"&
+             &,status="replace")
+        WRITE(rgavgwrite,'(A5,1X,4(A3,1X))') "tstep", "rgt","rgx","&
+             &rgy","rgz"
+
+     END IF
+
+     IF(rgall) THEN
+        dum_fname = "rgall_"//trim(adjustl(traj_fname))
+        OPEN(unit = rgwrite,file =trim(dum_fname),action="write"&
+             &,status="replace")
+     END IF
+ 
+  END IF
+
+   
+END SUBROUTINE OPEN_STRUCT_OUTPUT_FILES
+
+!--------------------------------------------------------------------
+
+SUBROUTINE ALLOUTPUTS()
+
+  USE ANALYZE_PARAMS
+  IMPLICIT NONE
+  INTEGER :: i
+
+  PRINT *, "Number of frames from start to end: ", nframes/(freqfr+1)
+  PRINT *, "Frequency of Frames: ", freqfr + 1
+  PRINT *, "Total number of Frames analyzed: ", nfrcntr
+
+  WRITE(logout,*) "Number of frames from start to end: ", nframes&
+       &/(freqfr+1)
+  WRITE(logout,*) "Frequency of Frames: ", freqfr+1
+  WRITE(logout,*) "Total number of Frames analyzed: ", nfrcntr
+
+  IF(rdfcalc) THEN
+     PRINT *, "Writing RDFs .."
+     CALL OUTPUT_ALLRDF()
+  END IF
+
+  IF(catan_neighcalc) THEN
+     PRINT *, "Writing neighbors .."
+     CALL OUTPUT_ALLNEIGHBORS()
+  END IF
+
+
+END SUBROUTINE ALLOUTPUTS
+
+!--------------------------------------------------------------------
+
+SUBROUTINE OUTPUT_ALLRDF()
 
   USE ANALYZE_PARAMS
   IMPLICIT NONE
 
-  INTEGER, INTENT(IN) :: tval
-  INTEGER :: i,aid,atype
-  REAL :: xmom, ymom, zmom
-  REAL, PARAMETER :: tol_mom = 1e-5
+  INTEGER :: i,j,ierr
+  REAL, PARAMETER :: vconst = 4.0*pival/3.0
+  REAL :: rlower,rupper,nideal,rdffrnorm,acrnorm
+  
+  IF(rdfcalc .or. bfrdf_calc) THEN
 
-  xmom = 0; ymom = 0; zmom = 0
-
-  DO i = 1, ntotatoms
+     rdffrnorm = INT(nfrcntr/rdffreq)
+     rvolavg = rvolavg/REAL(rdffrnorm)
+     PRINT *, "Average volume of box", rvolavg
      
-     aid = vel_xyz(i,1); atype = aidvals(aid,3)
-     xmom = xmom + masses(atype,1)*vel_xyz(i,2)
-     ymom = ymom + masses(atype,1)*vel_xyz(i,3)
-     zmom = zmom + masses(atype,1)*vel_xyz(i,4)
+     IF(rdfcalc == .true.) THEN
+        dum_fname = "rdf_"//trim(adjustl(traj_fname))
+        OPEN(unit = dumwrite,file =trim(dum_fname),action="write"&
+             &,status="replace",iostat=ierr)
+     
+        IF(ierr /= 0) THEN
+           PRINT *, "Could not open", trim(dum_fname)
+        END IF
+     
+        WRITE(dumwrite,'(A,2X)',advance="no") "r"
+     
+        DO j = 1,npairs
+        
+           WRITE(dumwrite,'(2(I0,1X))',advance="no") pairs_rdf(j,1)&
+                &,pairs_rdf(j,2)
+        
+        END DO
+     
+        WRITE(dumwrite,*)
+     
+        DO i = 0,rmaxbin-1
+           
+           rlower = real(i)*rbinval
+           rupper = rlower + rbinval
+           nideal = vconst*(rupper**3 - rlower**3)
+        
+           WRITE(dumwrite,'(F16.5,2X)',advance="no") 0.5*rbinval&
+                &*(REAL(2*i+1))
+        
+           DO j = 1,npairs
+           
+              WRITE(dumwrite,'(F16.9,1X)',advance="no")rdfarray(i,j)&
+                &/(rdffrnorm*nideal)
+              
+           END DO
+        
+           WRITE(dumwrite,*)
+        
+        END DO
+     
+        CLOSE(dumwrite)
 
-  END DO
+     END IF
 
-  IF( (abs(xmom) .GT. tol_mom) .OR. (abs(ymom) .GT. tol_mom) .OR.&
-       & (abs(zmom) .GT. tol_mom) ) THEN
+     IF(bfrdf_calc == .true.) THEN
 
-     PRINT *, "WARNING: Net momentum not zero: ", tval,xmom,ymom,zmom
+        dum_fname = "freeboundrdf_"//trim(adjustl(traj_fname))
+        OPEN(unit = dumwrite,file =trim(dum_fname),action="write"&
+             &,status="replace",iostat=ierr)
+     
+        IF(ierr /= 0) THEN
+           PRINT *, "Could not open", trim(dum_fname)
+        END IF
 
-  ELSE
+        rlower = real(i)*rbinval
+        rupper = rlower + rbinval
+        nideal = vconst*(rupper**3 - rlower**3)
+        
+        DO i = 0,rmaxbin-1
 
-     IF(tval == 0) THEN
+           WRITE(dumwrite,'(4(F16.9,1X))') 0.5*rbinval*(REAL(2*i&
+                &+1)),rdf_p_fb(i)/(rdffrnorm*nideal),rdf_p_ff(i)&
+                &/(rdffrnorm*nideal),rdf_p_bb(i)/(rdffrnorm*nideal)
 
-        PRINT *, "Momentum conserved at the beginning: ", xmom, ymom,&
-             & zmom
+        END DO
+
+        CLOSE(dumwrite)
 
      END IF
 
   END IF
 
-END SUBROUTINE CHECK_MOMENTUM
+END SUBROUTINE OUTPUT_ALLRDF
 
+!--------------------------------------------------------------------
+
+SUBROUTINE OUTPUT_ALLNEIGHBORS()
+
+  USE ANALYZE_PARAMS
+
+  IMPLICIT NONE
+
+  INTEGER :: i,frnorm,ierr
+  REAL :: totcat_an_neigh,totan_cat_neigh
+
+  IF(neighfreq == 1) frnorm = nframes
+  IF(neighfreq .NE. 1) frnorm = nframes/neighfreq + 1
+
+  totcat_an_neigh = 0.0; totan_cat_neigh = 0.0
+
+  IF(catan_neighcalc) THEN
+!$OMP PARALLEL DO REDUCTION(+:totcat_an_neigh,totan_cat_neigh) PRIVATE(i)
+  
+     DO i = 1,maxneighsize
+
+        totcat_an_neigh = totcat_an_neigh + REAL(cat_an_neighavg(i))
+        totan_cat_neigh = totan_cat_neigh + REAL(an_cat_neighavg(i))
+
+     END DO
+
+!$OMP END PARALLEL DO
+
+     IF(catan_neighcalc) THEN
+        
+        dum_fname = "catanneigh_"//trim(adjustl(traj_fname))
+        OPEN(unit = dumwrite,file =trim(dum_fname),action="write"&
+             &,status="replace")
+
+        
+     END IF
+
+     
+     DO i = 1,maxneighsize     
+
+        WRITE(dumwrite,'(I0,1X,4(F14.8,1X))') i,&
+             & REAL(cat_an_neighavg(i))/REAL(frnorm),100.0&
+             &*REAL(cat_an_neighavg(i))/totcat_an_neigh&
+             &,REAL(an_cat_neighavg(i))/REAL(frnorm),100.0&
+             &*REAL(an_cat_neighavg(i))/totan_cat_neigh
+
+     END DO
+
+     CLOSE(dumwrite)
+
+  END IF
+
+END SUBROUTINE OUTPUT_ALLNEIGHBORS
+     
 !--------------------------------------------------------------------
 
 SUBROUTINE ALLOCATE_TOPO_ARRAYS()
@@ -1846,6 +2539,22 @@ SUBROUTINE ALLOCATE_ANALYSIS_ARRAYS()
   ELSE
      ALLOCATE(rdfarray(1,1),stat = AllocateStatus)
      DEALLOCATE(rdfarray)
+  END IF
+
+  IF(bfrdf_calc) THEN
+     ALLOCATE(rdf_p_fb(0:rmaxbin-1),stat = AllocateStatus)
+     IF(AllocateStatus/=0) STOP "did not allocate rdf_p_fb"
+     ALLOCATE(rdf_p_fb(0:rmaxbin-1),stat = AllocateStatus)
+     IF(AllocateStatus/=0) STOP "did not allocate rdf_p_bb"
+     ALLOCATE(rdf_p_fb(0:rmaxbin-1),stat = AllocateStatus)
+     IF(AllocateStatus/=0) STOP "did not allocate rdf_p_ff"
+  ELSE
+     ALLOCATE(rdf_p_fb(1),stat = AllocateStatus)
+     DEALLOCATE(rdf_p_fb)
+     ALLOCATE(rdf_p_bb(1),stat = AllocateStatus)
+     DEALLOCATE(rdf_p_fb)
+     ALLOCATE(rdf_p_ff(1),stat = AllocateStatus)
+     DEALLOCATE(rdf_p_fb)
   END IF
 
 ! Allocate for dynamics 

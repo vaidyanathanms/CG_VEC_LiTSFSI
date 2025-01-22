@@ -26,14 +26,17 @@ MODULE ANALYZE_PARAMS
   INTEGER :: c_ioncnt, c_iontype
   INTEGER :: p_ioncnt, p_iontype
   INTEGER :: maxneighsize, neighfreq
+  INTEGER :: ntotion_centers
   REAL    :: rneigh_cut
-
+  
   ! All analysis flags
   INTEGER :: polyflag
   INTEGER :: rdfcalc, rgcalc, rgall, rgavg
   INTEGER :: ion_dynflag, cion_dynflag, pion_dynflag
   INTEGER :: ion_diff, cion_diff, pion_diff
   INTEGER :: catan_neighcalc
+  INTEGER :: bfrdf_calc
+  INTEGER :: clust_calc
 
   ! File names and unit numbers
   CHARACTER(LEN = 256) :: ana_fname,data_fname,traj_fname,log_fname
@@ -69,11 +72,15 @@ MODULE ANALYZE_PARAMS
   INTEGER,ALLOCATABLE,DIMENSION(:)   :: polytyp_arr
   INTEGER,ALLOCATABLE,DIMENSION(:,:) :: ionarray,counterarray
   INTEGER,ALLOCATABLE,DIMENSION(:,:) :: polyionarray
+  INTEGER,ALLOCATABLE,DIMENSION(:,:) :: allionids
+  REAL,ALLOCATABLE,DIMENSION(:) :: clust_avg
 
   !Required Arrays - Structural Quantities
   REAL,ALLOCATABLE,DIMENSION(:,:):: rdfarray, densarray, grparray
   INTEGER,ALLOCATABLE,DIMENSION(:,:):: pairs_rdf
   REAL, ALLOCATABLE, DIMENSION(:) :: cat_an_neighavg,an_cat_neighavg
+  REAL, ALLOCATABLE, DIMENSION(:) :: rdf_p_fb,rdf_p_bb,rdf_p_ff
+  INTEGER, ALLOCATABLE,DIMENSION(:) :: polboundarr,polfreearr
 
   !Required Arrays - Dynamic Quantities
   REAL*8, ALLOCATABLE, DIMENSION(:,:) :: trx_lmp,try_lmp,trz_lmp
