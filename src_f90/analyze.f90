@@ -145,6 +145,7 @@ SUBROUTINE READ_ANA_IP_FILE()
 
      ELSEIF(dumchar == 'catanneigh') THEN
         
+        catan_neighcalc = 1
         READ(anaread,*,iostat=ierr) neighfreq,maxneighsize,rneigh_cut
 
      ELSEIF(dumchar == 'log_file') THEN
@@ -745,7 +746,7 @@ SUBROUTINE STRUCT_MAIN(tval)
         CALL SYSTEM_CLOCK(t1,clock_rate,clock_max)
         CALL CAT_AN_NEIGHS()
         CALL SYSTEM_CLOCK(t2,clock_rate,clock_max)
-        PRINT *, 'Elapsed real time for LiP-Neight Analysis= ',REAL(t2&
+        PRINT *, 'Elapsed real time for Neighbor Analysis= ',REAL(t2&
              &-t1)/REAL(clock_rate)
 
      END IF

@@ -1,11 +1,11 @@
 datafile
-init_config.data
+topo_VECdata_40_0.05.dat
 trajectory_file
-config_1000000.lammpstrj
+config_7500000.lammpstrj
 nframes
-10
+3000
 skipfr
-0
+100
 freqfr
 0
 nchains
