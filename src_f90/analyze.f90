@@ -192,7 +192,7 @@ SUBROUTINE READ_ANA_IP_FILE()
 
   END DO
 
-  IF(logflag == 0) log_fname = "log."//trim(adjustl(traj_fname))
+  IF(logflag == 0) log_fname = "log_"//trim(adjustl(traj_fname))
   OPEN(unit = logout,file=trim(log_fname),action="write",status="repla&
        &ce",iostat=ierr)
 
@@ -2187,12 +2187,13 @@ SUBROUTINE DIFF_IONS()
   REAL    :: rxcm, rycm, rzcm
   REAL, DIMENSION(0:nframes-1) :: gxarr,gyarr,gzarr
 
-  OPEN(unit = 91,file = "iondiffusivity.dat", status="replace",action&
+  dum_fname = "iondiff_"//trim(adjustl(traj_fname))
+  OPEN(unit = dumwrite,file = dum_fname, status="replace",action&
        &="write",iostat = ierr)
 
-  IF(ierr /= 0) STOP "Diffusion file not found"
+  IF(ierr /= 0) STOP "Ion diffusion file not found"
 
-  WRITE(91,*) ioncnt, iontype
+  WRITE(dumwrite,*) ioncnt, iontype
 
 ! Ion Diffusion Analysis
 
@@ -2239,12 +2240,13 @@ SUBROUTINE DIFF_IONS()
 
   DO i = 0, nframes-1
 
-     WRITE(91,"(I10,1X,3(F14.5,1X))") i, gxarr(i),gyarr(i)&
+     WRITE(dumwrite,"(I10,1X,3(F14.5,1X))") i, gxarr(i),gyarr(i)&
           &,gzarr(i)
 
   END DO
 
-  CLOSE(91)
+  CLOSE(dumwrite)
+
 END SUBROUTINE DIFF_IONS
 
 !--------------------------------------------------------------------
@@ -2259,12 +2261,13 @@ SUBROUTINE DIFF_COUNTERIONS()
   REAL    :: rxcm, rycm, rzcm
   REAL, DIMENSION(0:nframes-1) :: gxarr,gyarr,gzarr
 
-  OPEN(unit = 91,file = "ciondiff.txt", status="replace"&
-       &,action="write",iostat = ierr)
+  dum_fname = "countiondiff_"//trim(adjustl(traj_fname))
+  OPEN(unit = dumwrite,file = dum_fname, status="replace",action&
+       &="write",iostat = ierr)
 
-  IF(ierr /= 0) STOP "Diffusion file not found"
+  IF(ierr /= 0) STOP "Counter-ion diffusion file not found"
 
-  WRITE(91,*) c_ioncnt, c_iontype
+  WRITE(dumwrite,*) c_ioncnt, c_iontype
 
 ! Ion Diffusion Analysis
 
@@ -2312,11 +2315,12 @@ SUBROUTINE DIFF_COUNTERIONS()
 
   DO i = 0, nframes-1
 
-     WRITE(91,"(I10,1X,3(F14.5,1X))") i, gxarr(i),gyarr(i),gzarr(i)
+     WRITE(dumwrite,"(I10,1X,3(F14.5,1X))") i, gxarr(i),gyarr(i)&
+          &,gzarr(i)
 
   END DO
 
-  CLOSE(91)
+  CLOSE(dumwrite)
 
 END SUBROUTINE DIFF_COUNTERIONS
 
@@ -2334,10 +2338,11 @@ SUBROUTINE RESIDENCE_TIME_CATPOL()
   INTEGER,DIMENSION(1:p_ioncnt,nframes) :: autocf
   REAL,DIMENSION(0:nframes-1) :: tplot_cf
 
-  OPEN(unit = 91,file = "pol_autocorr.txt", status="replace", action &
-       &="write",iostat=ierr)
+  dum_fname = "autocorrpol_"//trim(adjustl(traj_fname))
+  OPEN(unit = dumwrite,file = dum_fname, status="replace",action&
+       &="write",iostat = ierr)
 
-  IF(ierr /= 0) STOP "residence time file not found"
+  IF(ierr /= 0) STOP "polymer residence time file not found"
 
 !$OMP PARALLEL
 !$OMP DO PRIVATE(i,j)
@@ -2438,10 +2443,11 @@ SUBROUTINE RESIDENCE_TIME_CATPOL()
 
   DO tinc = 0, nframes-1
 
-     WRITE(91,"(I0,1X,F14.6)") tinc, tplot_cf(tinc)
+     WRITE(dumwrite,"(I0,1X,F14.6)") tinc, tplot_cf(tinc)
 
   END DO
 
+  CLOSE(dumwrite)
 
 END SUBROUTINE RESIDENCE_TIME_CATPOL
 
@@ -2460,10 +2466,11 @@ SUBROUTINE RESIDENCE_TIME_CATAN()
   INTEGER,DIMENSION(1:c_ioncnt,nframes) :: autocf
   REAL,DIMENSION(0:nframes-1) :: tplot_cf
 
-  OPEN(unit = 91,file = "cion_autocorr.txt", status="replace", action&
-       & ="write",iostat=ierr)
+  dum_fname = "autocorrcion_"//trim(adjustl(traj_fname))
+  OPEN(unit = dumwrite,file = dum_fname, status="replace",action&
+       &="write",iostat = ierr)
 
-  IF(ierr /= 0) STOP "residence time file not found"
+  IF(ierr /= 0) STOP "c-ion residence time file not found"
 
 !$OMP PARALLEL
 !$OMP DO PRIVATE(i,j)
@@ -2562,10 +2569,11 @@ SUBROUTINE RESIDENCE_TIME_CATAN()
 
   DO tinc = 0, nframes-1
 
-     WRITE(91,"(I0,1X,F14.6)") tinc, tplot_cf(tinc)
+     WRITE(dumwrite,"(I0,1X,F14.6)") tinc, tplot_cf(tinc)
 
   END DO
 
+  CLOSE(dumwrite)
 
 END SUBROUTINE RESIDENCE_TIME_CATAN
 
