@@ -144,7 +144,7 @@ SUBROUTINE READ_ANA_IP_FILE()
         rgcalc = 1
         READ(anaread,*,iostat=ierr) rgfreq,rgall,rgavg
 
-     ELSEIF(dumchar == 'catanneigh') THEN
+     ELSEIF(dumchar == 'compute_catanneigh') THEN
 
         catan_neighcalc = 1
         READ(anaread,*,iostat=ierr) neighfreq,maxneighsize,rneigh_cut
