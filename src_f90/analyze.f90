@@ -169,11 +169,13 @@ SUBROUTINE READ_ANA_IP_FILE()
         
         READ(anaread,*,iostat=ierr) rcatan_cut
         catan_autocfflag = 1
+        ion_dynflag = 1; cion_dynflag = 1
 
      ELSEIF(dumchar == 'compute_catpolrestime') THEN
 
         READ(anaread,*,iostat=ierr) rcatpol_cut2
-        catpol_autocfflag = 1
+        catpol_autocfflag = 1; pion_dynflag = 1
+        ion_dynflag = 1
 
      ! Read log filename
      ELSEIF(dumchar == 'log_file') THEN
@@ -946,7 +948,7 @@ SUBROUTINE SORTALLARRAYS()
      ALLOCATE(allionids(1,2),stat = AllocateStatus)
      DEALLOCATE(allionids)
      ALLOCATE(clust_avg(1),stat = AllocateStatus)
-     DEALLOCATE(polyionarray)
+     DEALLOCATE(clust_avg)
 
   END IF
      
@@ -2106,10 +2108,29 @@ SUBROUTINE DYNAMICS_MAIN()
   USE ANALYZE_PARAMS
   IMPLICIT NONE
 
-  IF(ion_diff) CALL DIFF_IONS()
-  IF(cion_diff) CALL DIFF_COUNTERIONS()
-  IF(catan_autocfflag) CALL RESIDENCE_TIME_CATAN()
-  IF(catpol_autocfflag) CALL RESIDENCE_TIME_CATPOL()
+  IF(ion_diff) THEN
+     PRINT *, "Beginning ion diffusion calculation..."
+     CALL DIFF_IONS()
+     PRINT *, "Finished ion diffusion calculation..."
+  END IF
+
+  IF(cion_diff) THEN
+     PRINT *, "Beginning counter-ion diffusion calculation..."
+     CALL DIFF_COUNTERIONS()
+     PRINT *, "Finished counter-ion diffusion calculation..."
+  END IF
+
+  IF(catan_autocfflag) THEN
+     PRINT *, "Beginning cat-an residence time calculation..."
+     CALL RESIDENCE_TIME_CATAN()
+     PRINT *, "Finished cat-an residence time calculation..."
+  END IF
+
+  IF(catpol_autocfflag) THEN
+     PRINT *, "Beginning cat-pol residence time calculation..."
+     CALL RESIDENCE_TIME_CATPOL()
+     PRINT *, "Beginning cat-pol residence time calculation..."
+  END IF
 
 END SUBROUTINE DYNAMICS_MAIN
 
@@ -2172,8 +2193,6 @@ SUBROUTINE DIFF_IONS()
   IF(ierr /= 0) STOP "Diffusion file not found"
 
   WRITE(91,*) ioncnt, iontype
-
-  PRINT *, "Computing diffusivity of ions .. "
 
 ! Ion Diffusion Analysis
 
@@ -2246,8 +2265,6 @@ SUBROUTINE DIFF_COUNTERIONS()
   IF(ierr /= 0) STOP "Diffusion file not found"
 
   WRITE(91,*) c_ioncnt, c_iontype
-
-  PRINT *, "Computing diffusivity of counterions .. "
 
 ! Ion Diffusion Analysis
 
@@ -2343,14 +2360,32 @@ SUBROUTINE RESIDENCE_TIME_CATPOL()
      DO i = 1,p_ioncnt !populate autocorrelation fn array
 
         j = 1; a1id = polyionarray(i,1)
-        
+
+        IF(aidvals(a1id,3) .NE. p_iontype) THEN
+              
+           PRINT *, "Wrong poly-iontype atom type"
+           PRINT *, tval, a1id, aidvals(a1id,3), p_iontype,&
+                & polyionarray(i,1)
+           STOP
+
+        END IF
+           
         DO WHILE(j .LE. ioncnt)
 
            a2id = ionarray(j,1)
+
+           IF(aidvals(a2id,3) .NE. iontype) THEN
+              
+              PRINT *, "Wrong atom type"
+              PRINT *, tval, a2id, aidvals(a2id,3), iontype,&
+                   & ionarray(j,1)
+              STOP
+
+           END IF
            
-           rxval = ptrx_lmp(a1id,tval) - itrx_lmp(a2id,tval) 
-           ryval = ptry_lmp(a1id,tval) - itry_lmp(a2id,tval) 
-           rzval = ptrz_lmp(a1id,tval) - itrz_lmp(a2id,tval) 
+           rxval = ptrx_lmp(i,tval) - itrx_lmp(j,tval) 
+           ryval = ptry_lmp(i,tval) - itry_lmp(j,tval) 
+           rzval = ptrz_lmp(i,tval) - itrz_lmp(j,tval) 
            
            rxval = rxval - box_xl*ANINT(rxval/box_xl)
            ryval = ryval - box_yl*ANINT(ryval/box_yl)
@@ -2452,13 +2487,29 @@ SUBROUTINE RESIDENCE_TIME_CATAN()
 
         j = 1; a1id = counterarray(i,1)
         
+        IF(aidvals(a1id,3) .NE. c_iontype) THEN
+           
+           PRINT *, "Wrong counter-ion type"
+           PRINT *, tval, a1id, aidvals(a1id,3), c_iontype,&
+                & counterarray(i,1)
+
+        END IF
+
         DO WHILE(j .LE. ioncnt)
 
            a2id = ionarray(j,1)
+
+           IF(aidvals(a2id,3) .NE. iontype) THEN
            
-           rxval = ptrx_lmp(a1id,tval) - itrx_lmp(a2id,tval) 
-           ryval = ptry_lmp(a1id,tval) - itry_lmp(a2id,tval) 
-           rzval = ptrz_lmp(a1id,tval) - itrz_lmp(a2id,tval) 
+              PRINT *, "Wrong ion type"
+              PRINT *, tval, a2id, aidvals(a2id,3), iontype&
+                   &,ionarray(j,1)
+              
+           END IF
+           
+           rxval = ctrx_lmp(i,tval) - itrx_lmp(j,tval) 
+           ryval = ctry_lmp(i,tval) - itry_lmp(j,tval) 
+           rzval = ctrz_lmp(i,tval) - itrz_lmp(j,tval) 
            
            rxval = rxval - box_xl*ANINT(rxval/box_xl)
            ryval = ryval - box_yl*ANINT(ryval/box_yl)
@@ -2819,9 +2870,9 @@ SUBROUTINE ALLOCATE_ANALYSIS_ARRAYS()
      ALLOCATE(rdf_p_fb(1),stat = AllocateStatus)
      DEALLOCATE(rdf_p_fb)
      ALLOCATE(rdf_p_bb(1),stat = AllocateStatus)
-     DEALLOCATE(rdf_p_fb)
+     DEALLOCATE(rdf_p_bb)
      ALLOCATE(rdf_p_ff(1),stat = AllocateStatus)
-     DEALLOCATE(rdf_p_fb)
+     DEALLOCATE(rdf_p_ff)
   END IF
 
 ! Allocate for dynamics 
