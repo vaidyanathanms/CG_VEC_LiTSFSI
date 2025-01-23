@@ -1,5 +1,5 @@
 datafile
-init_config.data
+topo_VECdata_40_0.05.dat
 trajectory_file
 config_8000000.lammpstrj
 nframes
