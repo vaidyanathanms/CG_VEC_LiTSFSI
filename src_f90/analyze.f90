@@ -2624,7 +2624,7 @@ SUBROUTINE ALLOUTPUTS()
   WRITE(logout,*) "Frequency of Frames: ", freqfr+1
   WRITE(logout,*) "Total number of Frames analyzed: ", nfrcntr
 
-  IF(rdfcalc) THEN
+  IF(rdfcalc .or. bfrdf_calc) THEN
      PRINT *, "Writing RDFs .."
      CALL OUTPUT_ALLRDF()
   END IF
@@ -2654,7 +2654,7 @@ SUBROUTINE OUTPUT_ALLRDF()
      rvolavg = rvolavg/REAL(rdffrnorm)
      PRINT *, "Average volume of box", rvolavg
      
-     IF(rdfcalc == .true.) THEN
+     IF(rdfcalc) THEN
         dum_fname = "rdf_"//trim(adjustl(traj_fname))
         OPEN(unit = dumwrite,file =trim(dum_fname),action="write"&
              &,status="replace",iostat=ierr)
@@ -2698,7 +2698,7 @@ SUBROUTINE OUTPUT_ALLRDF()
 
      END IF
 
-     IF(bfrdf_calc == .true.) THEN
+     IF(bfrdf_calc) THEN
 
         dum_fname = "freeboundrdf_"//trim(adjustl(traj_fname))
         OPEN(unit = dumwrite,file =trim(dum_fname),action="write"&
