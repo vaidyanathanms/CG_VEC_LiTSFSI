@@ -2613,7 +2613,7 @@ SUBROUTINE ALLOUTPUTS()
 
   USE ANALYZE_PARAMS
   IMPLICIT NONE
-  INTEGER :: i
+  INTEGER :: i,ierr
 
   PRINT *, "Number of frames from start to end: ", nframes/(freqfr+1)
   PRINT *, "Frequency of Frames: ", freqfr + 1
