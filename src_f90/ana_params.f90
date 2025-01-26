@@ -45,7 +45,6 @@ MODULE ANALYZE_PARAMS
   INTEGER, PARAMETER :: anaread = 2,   logout = 3
   INTEGER, PARAMETER :: dumwrite = 50
   INTEGER, PARAMETER :: inpread = 100, rgwrite = 200,rgavgwrite = 300
-  INTEGER, PARAMETER :: catanwrite = 420
 
   !Math Constants
   REAL*8, PARAMETER :: pival  = 3.14159265359

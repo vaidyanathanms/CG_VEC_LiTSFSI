@@ -10,7 +10,7 @@ PROGRAM PEMAIN
 
 ! Print headers
 
-  PRINT *, "Static analysis of CG_VEC_MTFSI system .."
+  PRINT *, "Static analysis of SIC system .."
   PRINT *, "Starting OMP Threads .."
 !$OMP PARALLEL
   nproc = OMP_GET_NUM_THREADS()
@@ -2634,9 +2634,25 @@ SUBROUTINE ALLOUTPUTS()
      CALL OUTPUT_ALLNEIGHBORS()
   END IF
 
+  IF(clust_calc) THEN
+
+     dum_fname = "clust_"//trim(adjustl(traj_fname))
+     OPEN(unit = dumwrite,file =trim(dum_fname),action="write"&
+          &,status="replace",iostat=ierr)
+
+     IF(ierr /= 0) PRINT *, "Unknown clust_filename"
+     DO i = 1,ntotion_centers
+
+        WRITE(dumwrite,'(I0,1X,F14.8,1X)') i, REAL(clust_avg(i))&
+             &/REAL(nframes)
+
+     END DO
+     CLOSE(dumwrite)
+
+  END IF
 
 END SUBROUTINE ALLOUTPUTS
-
+  
 !--------------------------------------------------------------------
 
 SUBROUTINE OUTPUT_ALLRDF()
