@@ -612,9 +612,9 @@ SUBROUTINE ANALYZE_TRAJECTORYFILE()
 
         END IF       
 
-        rxyz_lmp(j,1) = rxyz_lmp(j,1) - xlo
-        rxyz_lmp(j,2) = rxyz_lmp(j,2) - ylo
-        rxyz_lmp(j,3) = rxyz_lmp(j,3) - zlo
+        rxyz_lmp(aid,1) = rxyz_lmp(aid,1) - xlo
+        rxyz_lmp(aid,2) = rxyz_lmp(aid,2) - ylo
+        rxyz_lmp(aid,3) = rxyz_lmp(aid,3) - zlo
 
      END DO
      
@@ -1310,7 +1310,7 @@ SUBROUTINE COMPUTE_RDF(iframe)
                  
                  dumrdfarray(ibin,paircnt) = dumrdfarray(ibin&
                       &,paircnt) + 1
-              
+             
               END IF
 
            END IF
