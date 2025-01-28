@@ -775,7 +775,7 @@ SUBROUTINE SORTALLARRAYS()
 
   IMPLICIT NONE
 
-  INTEGER :: i,j,a1type,cnt,AllocateStatus,ntotion_cnt
+  INTEGER :: i,j,a1type,cnt,AllocateStatus,ntotion_cnt,aid,molid
   INTEGER, DIMENSION(1:ntotatoms,2) :: dumsortarr,dumcionarr&
        &,dumpionarr
 
@@ -1001,10 +1001,11 @@ SUBROUTINE SORTALLARRAYS()
           &ace")
   
      WRITE(93,*) "Reference type/count: ", p_iontype, p_ioncnt
-     
+     WRITE(93,*) "#  ","ID  ","molID  ","Type"
      DO i = 1,p_ioncnt
-        
-        WRITE(93,'(3(I0,1X))') i,polyionarray(i,1), polyionarray(i,2)
+        aid = polyionarray(i,1)
+        molid = aidvals(aid,2)
+        WRITE(93,'(4(I0,1X))') i,polyionarray(i,1),molid, polyionarray(i,2)
         
      END DO
      
