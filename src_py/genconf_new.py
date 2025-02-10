@@ -26,15 +26,15 @@ from my_python_functions import clean_backup_initfiles
 
 #---------input flags------------------------------------------
 #0-initial run  1- production
-restart   = 1  # For restarting from given configurations
-num_hrs   = 47 # Total number of hours for run
+restart   = 0  # For restarting from given configurations
+num_hrs   = 23 # Total number of hours for run
 num_nodes = 6  # Number of nodes
 num_cores = 36 # Number of cores per node
-hpc_sys   = 'cades'  # Opt: kestrel, cades
-sys_type  = 'S2' # S1; S2; S3; S4
+hpc_sys   = 'kestrel'  # Opt: kestrel, cades
+sys_type  = 'S3' # S1; S2; S3; S4
 
 #---------input details - Topology--------------------------------
-frac_anions  = [1/20,1/15]# /11,1/5]#,1/11,1/15,1/5,1/20]#,1/15,1/20]#, 1/10, 1/5] # fraction of anions
+frac_anions  = [1/3]# /11,1/5]#,1/11,1/15,1/5,1/20]#,1/15,1/20]#, 1/10, 1/5] # fraction of anions
 tot_mons     = 4000 # total number of MONOMERS in the poly CHAIN
 chain_mw     = [40] # of monomer range per chain
 num_chains   = [int(tot_mons/x) for x in chain_mw] # of polymerized ch
@@ -120,7 +120,7 @@ else:
 f90_files = ['ran_numbers.f90','lmp_params_var.f90','lammps_inp.f90'] 
 lmp_files = ['in.init_var','in.nve','in.nvt','in.nvt_main','in.npt','jobmain_var.sh']
 tcl_files = ['guessangle_var.tcl'] 
-lmp_long  = ['in.nvt','in.nvt_main','in.npt','in.rdf','jobmain_long_var.sh']
+lmp_long  = ['in.nvt','in.nvt_main','in.rdf','jobmain_long_var.sh']
 
 #---------directory info---------------------------------------
 maindir = os.getcwd() #src_py dir
@@ -137,7 +137,7 @@ src_f90    = home_path + '/all_codes/files_CG-SIC/src_f90' #f90 dir
 src_lmp    = home_path + '/all_codes/files_CG-SIC/src_lmp' #lmp dir
 src_tcl    = home_path + '/all_codes/files_CG-SIC/src_tcl' #tcl dir
 scratchdir = scr_path  + '/cg_sic' #output headdir
-scr_head   = sys_type + '_sic_mixedvec_listsfi_' + str(blob_charge) # head dir scratch'
+scr_head   = sys_type + '_sic_mixedvec_listfsi_' + str(blob_charge) # head dir scratch'
 
 #--------lammps executable-------------------------------------
 if hpc_sys == 'kestrel':
