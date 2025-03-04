@@ -24,6 +24,7 @@ MODULE PARAMS
   ! blob
   INTEGER, PARAMETER :: CG_per_mon  = py_cgpermon ! No. of CG blobs per VEC 
   INTEGER, PARAMETER :: is_ion_sep  = py_isionsep ! ions in chain or not
+  INTEGER, PARAMETER :: flag_same_mass = py_samemass ! same mass or not
   REAL,    PARAMETER :: density     = py_density  ! System density
   
   ! Calculations based on input parameters for system initialization
