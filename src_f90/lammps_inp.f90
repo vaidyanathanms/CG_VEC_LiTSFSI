@@ -123,6 +123,18 @@ SUBROUTINE LMP_COORD()
   END IF
 
 
+!  WRITE(10,'(I0,1X,F14.8)') 1, 1.0 ! VEC without C=O
+!  WRITE(10,'(I0,1X,F14.8)') 2, 1.0  ! C=O of VEC
+!  WRITE(10,'(I0,1X,F14.8)') 3, 1.0 ! MTFSI
+
+!  IF(frac_unpoly .NE. 0.0) THEN
+!     WRITE(10,'(I0,1X,F14.8)') 4, 1.0 ! unpolymerized VEC w/o C=O 
+!     WRITE(10,'(I0,1X,F14.8)') 5, 1.0  ! C=O of unpolymerized VEC
+!     WRITE(10,'(I0,1X,F14.8)') 6, 1.0  ! Li
+!  ELSE
+!     WRITE(10,'(I0,1X,F14.8)') 4, 1.0  ! Li
+!  END IF
+
 
   ! Writing atomic coordinates
   
