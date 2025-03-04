@@ -26,15 +26,15 @@ from my_python_functions import clean_backup_initfiles
 
 #---------input flags------------------------------------------
 #0-initial run  1- production
-restart   = 1  # For restarting from given configurations
+restart   = 0  # For restarting from given configurations
 num_hrs   = 47 # Total number of hours for run
 num_nodes = 6  # Number of nodes
 num_cores = 36 # Number of cores per node
 hpc_sys   = 'cades'  # Opt: kestrel, cades
-sys_type  = 'S2' # S1; S2; S3; S4
+sys_type  = 'S3' # S1; S2; S3; S4
 
 #---------input details - Topology--------------------------------
-frac_anions  = [1/20,1/15]# /11,1/5]#,1/11,1/15,1/5,1/20]#,1/15,1/20]#, 1/10, 1/5] # fraction of anions
+frac_anions  = [1/7]# /11,1/5]#,1/11,1/15,1/5,1/20]#,1/15,1/20]#, 1/10, 1/5] # fraction of anions
 tot_mons     = 4000 # total number of MONOMERS in the poly CHAIN
 chain_mw     = [40] # of monomer range per chain
 num_chains   = [int(tot_mons/x) for x in chain_mw] # of polymerized ch
