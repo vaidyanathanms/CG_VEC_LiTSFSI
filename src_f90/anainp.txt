@@ -1,7 +1,7 @@
 datafile
-topo_VECdata_40_0.05.dat
+mytopo_VECdata_40_0.09.dat
 trajectory_file
-config_8000000.lammpstrj
+config_15000000.lammpstrj
 nframes
 100
 skipfr
@@ -18,7 +18,7 @@ compute_rg
 pion_type
 2
 ion_type
-4
+6
 cion_type
 3
 compute_rdf

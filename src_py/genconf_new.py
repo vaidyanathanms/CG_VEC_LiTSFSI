@@ -41,8 +41,9 @@ num_chains   = [int(tot_mons/x) for x in chain_mw] # of polymerized ch
 unpoly_farr  = [0.6] # fraction of unpolymerized mons
 density      = 0.8 # system density
 cg_per_mon   = 2 # number of blobs per polymer monomer
+same_mass    = 0 # 0-> different mass, 1 -> same mass for monomers
 blob_charge  = 0.2 # charge per blob
-case_arr     = [1] # case number
+case_arr     = [2] # case number
 
 if sys_type == 'S3': #1-VEC-anions blend; 0-VEC-anion copolymer
     is_anion_sep = 1 
@@ -120,7 +121,7 @@ else:
 f90_files = ['ran_numbers.f90','lmp_params_var.f90','lammps_inp.f90'] 
 lmp_files = ['in.init_var','in.nve','in.nvt','in.nvt_main','in.npt','jobmain_var.sh']
 tcl_files = ['guessangle_var.tcl'] 
-lmp_long  = ['in.nvt','in.nvt_main','in.npt','in.rdf','jobmain_long_var.sh']
+lmp_long  = ['in.nvt','in.nvt_main','in.rdf','jobmain_long_var.sh']
 
 #---------directory info---------------------------------------
 maindir = os.getcwd() #src_py dir
@@ -137,7 +138,10 @@ src_f90    = home_path + '/all_codes/files_CG-SIC/src_f90' #f90 dir
 src_lmp    = home_path + '/all_codes/files_CG-SIC/src_lmp' #lmp dir
 src_tcl    = home_path + '/all_codes/files_CG-SIC/src_tcl' #tcl dir
 scratchdir = scr_path  + '/cg_sic' #output headdir
-scr_head   = sys_type + '_sic_mixedvec_listsfi_' + str(blob_charge) # head dir scratch'
+if same_mass:
+    scr_head   = sys_type + '_sic_samemass_' + str(blob_charge) # head dir scratch'
+else:
+    scr_head   = sys_type + '_sic_mixedvec_listfsi_' + str(blob_charge) # head dir scratch'
 
 #--------lammps executable-------------------------------------
 if hpc_sys == 'kestrel':
@@ -220,7 +224,7 @@ for mw_ch in range(len(chain_mw)):
                                                                     chain_mw[mw_ch],casenum,\
                                                                     round(frac_anions[fr_an],2),density,\
                                                                     cg_per_mon,blob_charge,unpoly_frac,\
-                                                                    is_anion_sep)
+                                                                    is_anion_sep,same_mass)
 
                 compile_and_run_inpgenfyles(lmp_par,destdir,f90_comp=f90_comp)            
 

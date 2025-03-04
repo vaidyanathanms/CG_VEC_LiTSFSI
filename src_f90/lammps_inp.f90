@@ -109,20 +109,34 @@ SUBROUTINE LMP_COORD()
   WRITE (10,*)
   
   ! Writing Masses
+
+  IF(flag_same_mass == 0) THEN
   
-  WRITE(10,'(I0,1X,F14.8)') 1, 12.4 ! VEC without C=O
-  WRITE(10,'(I0,1X,F14.8)') 2, 4.0  ! C=O of VEC
-  WRITE(10,'(I0,1X,F14.8)') 3, 48.7 ! MTFSI
-
-  IF(frac_unpoly .NE. 0.0) THEN
-     WRITE(10,'(I0,1X,F14.8)') 4, 12.4 ! unpolymerized VEC w/o C=O 
-     WRITE(10,'(I0,1X,F14.8)') 5, 4.0  ! C=O of unpolymerized VEC
-     WRITE(10,'(I0,1X,F14.8)') 6, 1.0  ! Li
+     WRITE(10,'(I0,1X,F14.8)') 1, 12.4 ! VEC without C=O
+     WRITE(10,'(I0,1X,F14.8)') 2, 4.0  ! C=O of VEC
+     WRITE(10,'(I0,1X,F14.8)') 3, 48.7 ! MTFSI
+     
+     IF(frac_unpoly .NE. 0.0) THEN
+        WRITE(10,'(I0,1X,F14.8)') 4, 12.4 ! unpolymerized VEC w/o C=O 
+        WRITE(10,'(I0,1X,F14.8)') 5, 4.0  ! C=O of unpolymerized VEC
+        WRITE(10,'(I0,1X,F14.8)') 6, 1.0  ! Li
+     ELSE
+        WRITE(10,'(I0,1X,F14.8)') 4, 1.0  ! Li
+     END IF
+     
   ELSE
-     WRITE(10,'(I0,1X,F14.8)') 4, 1.0  ! Li
+     WRITE(10,'(I0,1X,F14.8)') 1, 1.0 ! VEC without C=O
+     WRITE(10,'(I0,1X,F14.8)') 2, 1.0  ! C=O of VEC
+     WRITE(10,'(I0,1X,F14.8)') 3, 1.0 ! MTFSI
+     
+     IF(frac_unpoly .NE. 0.0) THEN
+        WRITE(10,'(I0,1X,F14.8)') 4, 1.0 ! unpolymerized VEC w/o C=O 
+        WRITE(10,'(I0,1X,F14.8)') 5, 1.0  ! C=O of unpolymerized VEC
+        WRITE(10,'(I0,1X,F14.8)') 6, 1.0  ! Li
+     ELSE
+        WRITE(10,'(I0,1X,F14.8)') 4, 1.0  ! Li
+     END IF
   END IF
-
-
 
   ! Writing atomic coordinates
   

@@ -23,6 +23,7 @@ MODULE PARAMS
   REAL,    PARAMETER :: charge_poly = 0.2   ! Charge on polymer blob
   INTEGER, PARAMETER :: is_ion_sep  = 1 ! ions in chain or not
   INTEGER, PARAMETER :: CG_per_mon  = 2 ! No. of CG blobs per VEC 
+  INTEGER, PARAMETER :: flag_same_mass = py_samemass ! same mass or not
   REAL,    PARAMETER :: density     = 0.85  ! System density
 
   ! Calculations based on input parameters for system initialization

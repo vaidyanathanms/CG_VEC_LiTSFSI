@@ -612,9 +612,9 @@ SUBROUTINE ANALYZE_TRAJECTORYFILE()
 
         END IF       
 
-        rxyz_lmp(j,1) = rxyz_lmp(j,1) - xlo
-        rxyz_lmp(j,2) = rxyz_lmp(j,2) - ylo
-        rxyz_lmp(j,3) = rxyz_lmp(j,3) - zlo
+        rxyz_lmp(aid,1) = rxyz_lmp(aid,1) - xlo
+        rxyz_lmp(aid,2) = rxyz_lmp(aid,2) - ylo
+        rxyz_lmp(aid,3) = rxyz_lmp(aid,3) - zlo
 
      END DO
      
@@ -775,7 +775,7 @@ SUBROUTINE SORTALLARRAYS()
 
   IMPLICIT NONE
 
-  INTEGER :: i,j,a1type,cnt,AllocateStatus,ntotion_cnt
+  INTEGER :: i,j,a1type,cnt,AllocateStatus,ntotion_cnt,aid,molid
   INTEGER, DIMENSION(1:ntotatoms,2) :: dumsortarr,dumcionarr&
        &,dumpionarr
 
@@ -1001,10 +1001,11 @@ SUBROUTINE SORTALLARRAYS()
           &ace")
   
      WRITE(93,*) "Reference type/count: ", p_iontype, p_ioncnt
-     
+     WRITE(93,*) "#  ","ID  ","molID  ","Type"
      DO i = 1,p_ioncnt
-        
-        WRITE(93,'(3(I0,1X))') i,polyionarray(i,1), polyionarray(i,2)
+        aid = polyionarray(i,1)
+        molid = aidvals(aid,2)
+        WRITE(93,'(4(I0,1X))') i,polyionarray(i,1),molid, polyionarray(i,2)
         
      END DO
      
@@ -1310,7 +1311,7 @@ SUBROUTINE COMPUTE_RDF(iframe)
                  
                  dumrdfarray(ibin,paircnt) = dumrdfarray(ibin&
                       &,paircnt) + 1
-              
+             
               END IF
 
            END IF
