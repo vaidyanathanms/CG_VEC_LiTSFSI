@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 # Color/line data
 orange = '#FFA500'; dark_g = '#006400'; d_brown = '#8B4513'
 lite_g = '#7FC97F'; violet = '#BEAED4'; lite_o = 'FDC086'
-clr_arr = [violet,orange,d_brown,'m','b',dark_g,'r']
+clr_arr = [violet,orange,dark_g,'m',lite_o,'b',d_brown]
 mrk_arr = ['o','d','s','v','H','>']
 lne_arr = ['-','--']
 #------------------------------------------------------------------

@@ -7,7 +7,7 @@
 # Import modules
 import os
 import sys
-import numpy
+import numpy as np
 import re
 import shutil
 import glob
@@ -302,6 +302,35 @@ def set_axes(axhdl,plt,xlabel,ylabel):
     axhdl.set_ylabel(ylabel)
     change_width(axhdl,0.2)
 #------------------------------------------------------------------     
+def return_neigh_arrays(simdir,strpref,colarr,nheaders=0,maxneigh=5):
+    if len(colarr) != 2:
+        raise RuntimeError("Expecting 2 columns for plotting neighbors")
+
+    neigh_file = find_latest_file(glob.glob(simdir + '/' + strpref + '*'))
+    if neigh_file == -1:
+        return -1
+
+    sarr,neigharr = extract_data(neigh_file,colarr,nheaders,maxneigh)
+    return sarr,neigharr
+#------------------------------------------------------------------         
+def extract_data(filename,colarr,skipl=1,refnr=0):
+    data = np.loadtxt(filename, skiprows=skipl)  # Skips the first header line
+    nrows = data.shape[0]
+    if refnr == 0 or nrows < refnr:
+        col1 = data[:, colarr[0]]  # Column 1
+        col2 = data[:, colarr[1]]  # Column n
+    else:
+        col1 = data[:refnr, colarr[0]]  # Column 1
+        col2 = data[:refnr, colarr[1]]  # Column n       
+    return col1, col2
+#------------------------------------------------------------------         
+def find_latest_file(flist):
+    if not len(flist):
+        print('ERROR: No files found in ' + simdir)
+        return -1
+    outfile = max(flist, key=os.path.getmtime)
+    return outfile
+#------------------------------------------------------------------         
 # if __name__
 if __name__ == '__main__':
     main()
