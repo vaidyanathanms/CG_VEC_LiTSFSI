@@ -1302,7 +1302,7 @@ SUBROUTINE COMPUTE_RDF(iframe)
               
               rxval = rxval - box_xl*ANINT(rxval/box_xl)
               ryval = ryval - box_yl*ANINT(ryval/box_yl)
-              rzval = rzval - box_yl*ANINT(rzval/box_zl)
+              rzval = rzval - box_zl*ANINT(rzval/box_zl)
            
               rval = sqrt(rxval**2 + ryval**2 + rzval**2)
               ibin = FLOOR(rval/rbinval)
