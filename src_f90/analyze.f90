@@ -228,7 +228,7 @@ SUBROUTINE DEFAULTVALUES()
   npoly_types = 0; ioncnt = 0; c_ioncnt = 0; p_ioncnt= 0
 
   ! Initialize distributions and frequencies
-  rdffreq = 0; rgfreq = 0
+  rdffreq = 0; rgfreq = 1
 
   ! Initialzie structural quantities
   rdomcut = 10.0;  rmaxbin = 100; rbinval = REAL(rdomcut)&
