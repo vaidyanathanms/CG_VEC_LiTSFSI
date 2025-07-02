@@ -1,4 +1,4 @@
-# CG_VEC_LiSTSFSI
+# Coarse-Grained Simulation Codes for Single-Ion Conducting Polymer Models
 
 Files to do CG simulations of VEC-LiSTSFI.
 
