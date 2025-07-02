@@ -68,7 +68,7 @@ fix 1 all nvt temp 1.0 1.0 0.5
 run_style verlet
 restart   5000 restart1 restart2
 restart   500000 archival_*.restart
-timestep  0.006
+timestep  0.005
 run	  30000000 upto
 unfix 1
 write_restart 	restart_NVTmain.dat
