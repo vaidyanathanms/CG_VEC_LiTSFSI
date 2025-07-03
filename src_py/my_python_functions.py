@@ -170,7 +170,7 @@ def gen_angl_coeff_file(destdir,atyp_list,aname_list,kang_list,thet_list):
                                              thet_list[attype],aname_list[attype]))
             
 
-def run_lammps(sys_type,mw_chain,fr_anion,casenum,inpjob,outjob,tot_hrs,tot_nodes,tot_cores):
+def run_lammps(sys_type,mw_chain,fr_anion,casenum,inpjob,outjob,tot_hrs,tot_nodes,tot_cores,part_type):
 
     if not os.path.exists(inpjob):
         raise RuntimeError('ERROR: ' + inpjob + ' not found')
@@ -183,7 +183,8 @@ def run_lammps(sys_type,mw_chain,fr_anion,casenum,inpjob,outjob,tot_hrs,tot_node
           replace("py_tottime",str(tot_hrs)).\
           replace("py_nnodes",str(tot_nodes)).\
           replace("py_ncores",str(tot_cores)).\
-          replace("py_nptot",str(tot_cores*tot_nodes))
+          replace("py_nptot",str(tot_cores*tot_nodes)).\
+          replace("py_partition",str(part_type))
     fw.write(fid)
     fw.close()
     fr.close()
