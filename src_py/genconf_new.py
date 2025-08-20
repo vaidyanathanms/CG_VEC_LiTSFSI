@@ -27,23 +27,24 @@ from my_python_functions import clean_backup_initfiles
 #---------input flags------------------------------------------
 #0-initial run  1- production
 restart   = 0  # For restarting from given configurations
-num_hrs   = 23 # Total number of hours for run
+num_hrs   = 47 # Total number of hours for run
 num_nodes = 6  # Number of nodes
 num_cores = 36 # Number of cores per node
+part_type = 'hbw' #hbw or shared (partition type)
 hpc_sys   = 'kestrel'  # Opt: kestrel, cades
-sys_type  = 'S3' # S1; S2; S3; S4
+sys_type  = 'S1' # S1; S2; S3; S4
 
 #---------input details - Topology--------------------------------
-frac_anions  = [1/3]# /11,1/5]#,1/11,1/15,1/5,1/20]#,1/15,1/20]#, 1/10, 1/5] # fraction of anions
+frac_anions  = [1/5]#,1/20]#,1/15,1/20]#, 1/10, 1/5] # fraction of anions
 tot_mons     = 4000 # total number of MONOMERS in the poly CHAIN
 chain_mw     = [40] # of monomer range per chain
 num_chains   = [int(tot_mons/x) for x in chain_mw] # of polymerized ch
-unpoly_farr  = [0.6] # fraction of unpolymerized mons
+unpoly_farr  = [0.0] # fraction of unpolymerized mons
 density      = 0.8 # system density
 cg_per_mon   = 2 # number of blobs per polymer monomer
 same_mass    = 0 # 0-> different mass, 1 -> same mass for monomers
-blob_charge  = 0.2 # charge per blob
-case_arr     = [2] # case number
+blob_charge  = 3 # charge per blob
+case_arr     = [10] # case number
 
 if sys_type == 'S3': #1-VEC-anions blend; 0-VEC-anion copolymer
     is_anion_sep = 1 
@@ -121,7 +122,7 @@ else:
 f90_files = ['ran_numbers.f90','lmp_params_var.f90','lammps_inp.f90'] 
 lmp_files = ['in.init_var','in.nve','in.nvt','in.nvt_main','in.npt','jobmain_var.sh']
 tcl_files = ['guessangle_var.tcl'] 
-lmp_long  = ['in.nvt','in.nvt_main','in.rdf','jobmain_long_var.sh']
+lmp_long  = ['in.nvt','in.npt','in.nvt_main','in.rdf','jobmain_long_var.sh']
 
 #---------directory info---------------------------------------
 maindir = os.getcwd() #src_py dir
@@ -154,6 +155,8 @@ elif hpc_sys == 'cades':
     f90_comp   = 'ifort'
 else:
     raise RuntimeError('Unknown HPC system ' + hpc_sys)
+
+num_cores = int(2*num_cores) if part_type == 'hbw' else num_cores
 
 #--------Create scratchdir------------------------------------
 if not os.path.isdir(scratchdir):
@@ -248,7 +251,7 @@ for mw_ch in range(len(chain_mw)):
                 #---Run LAMMPS files-------------
                 edit_generate_input_lmp_files('in.init_var',ang_lmp_data_fyle)
                 run_lammps(sys_type,chain_mw[mw_ch],round(frac_anions[fr_an],2),casenum,\
-                           'jobmain_var.sh','jobmain.sh',num_hrs,num_nodes,num_cores)
+                           'jobmain_var.sh','jobmain.sh',num_hrs,num_nodes,num_cores,part_type)
                 
                 #----Copy/Backup initial files---
                 clean_backup_initfiles(f90_files,tcl_files,lmp_data_fyle,ang_lmp_data_fyle,destdir)

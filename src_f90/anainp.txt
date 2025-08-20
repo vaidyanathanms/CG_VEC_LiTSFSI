@@ -1,41 +1,29 @@
 datafile
-mytopo_VECdata_40_0.09.dat
+mytopo_VECdata_40_0.05.dat
 trajectory_file
-config_15000000.lammpstrj
+config_9995000.lammpstrj
 nframes
 100
 skipfr
-100
+200
 freqfr
-0
+1
 nchains
 100
 poly_types
 3
 1 2 3
-compute_rg
-1 1 1
 pion_type
 2
 ion_type
-6
+4
 cion_type
 3
-compute_rdf
-1 100 10 2
-3 4
-2 4
 compute_catanneigh
 1 10 2.0
-compute_boundpolrdf
-4.0
 compute_clust
 1
-compute_catanrestime
-2.0
-compute_catpolrestime
-2.0
 compute_iondiff
-1
+1 0.004
 compute_ciondiff
-1
+1 0.004

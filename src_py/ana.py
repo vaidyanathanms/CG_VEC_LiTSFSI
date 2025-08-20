@@ -31,7 +31,7 @@ skipfr       = 100 # skip frames
 freqfr       = 1 # freq of anaylsis
 
 #---------job details------------------------------------------
-tottime   = 3 # in hours
+tottime   = 4 # in hours
 nnodes    = 1 # number of nodes
 ncores    = 36 # number of cores
 hpc_sys   = 'cades'  # Opt: kestrel, cades

@@ -152,17 +152,17 @@ SUBROUTINE READ_ANA_IP_FILE()
      !Here onwards dynamic properties
      ELSEIF(dumchar == 'compute_iondiff') THEN
 
-        READ(anaread,*,iostat=ierr) ion_diff
+        READ(anaread,*,iostat=ierr) ion_diff, delta_t
         ion_dynflag = 1
 
      ELSEIF(dumchar == 'compute_piondiff') THEN !stored in polyionarray
 
-        READ(anaread,*,iostat=ierr) pion_diff
+        READ(anaread,*,iostat=ierr) pion_diff, delta_t
         pion_dynflag = 1
 
      ELSEIF(dumchar == 'compute_ciondiff') THEN
 
-        READ(anaread,*,iostat=ierr) cion_diff
+        READ(anaread,*,iostat=ierr) cion_diff, delta_t
         cion_dynflag = 1
 
      ELSEIF(dumchar == 'compute_catanrestime') THEN
@@ -228,7 +228,7 @@ SUBROUTINE DEFAULTVALUES()
   npoly_types = 0; ioncnt = 0; c_ioncnt = 0; p_ioncnt= 0
 
   ! Initialize distributions and frequencies
-  rdffreq = 0; rgfreq = 0
+  rdffreq = 0; rgfreq = 1
 
   ! Initialzie structural quantities
   rdomcut = 10.0;  rmaxbin = 100; rbinval = REAL(rdomcut)&
@@ -556,6 +556,9 @@ SUBROUTINE ANALYZE_TRAJECTORYFILE()
      READ(15,*)
      READ(15,*) timestep
 
+     IF(ion_dynflag .OR. cion_dynflag .OR. pion_dynflag) tarr_lmp(i) &
+          &= timestep
+     
      READ(15,*) 
      READ(15,*) atchk
 
@@ -1302,7 +1305,7 @@ SUBROUTINE COMPUTE_RDF(iframe)
               
               rxval = rxval - box_xl*ANINT(rxval/box_xl)
               ryval = ryval - box_yl*ANINT(ryval/box_yl)
-              rzval = rzval - box_yl*ANINT(rzval/box_zl)
+              rzval = rzval - box_zl*ANINT(rzval/box_zl)
            
               rval = sqrt(rxval**2 + ryval**2 + rzval**2)
               ibin = FLOOR(rval/rbinval)
@@ -2194,7 +2197,7 @@ SUBROUTINE DIFF_IONS()
 
   IF(ierr /= 0) STOP "Ion diffusion file not found"
 
-  WRITE(dumwrite,*) ioncnt, iontype
+  WRITE(dumwrite,'(2(I0,1X),F14.8)') ioncnt, iontype, delta_t
 
 ! Ion Diffusion Analysis
 
@@ -2241,8 +2244,8 @@ SUBROUTINE DIFF_IONS()
 
   DO i = 0, nframes-1
 
-     WRITE(dumwrite,"(I10,1X,3(F14.5,1X))") i, gxarr(i),gyarr(i)&
-          &,gzarr(i)
+     WRITE(dumwrite,"(I10,1X,3(F14.5,1X))") tarr_lmp(i+1), gxarr(i)&
+          &,gyarr(i), gzarr(i)
 
   END DO
 
@@ -2268,7 +2271,7 @@ SUBROUTINE DIFF_COUNTERIONS()
 
   IF(ierr /= 0) STOP "Counter-ion diffusion file not found"
 
-  WRITE(dumwrite,*) c_ioncnt, c_iontype
+  WRITE(dumwrite,'(2(I0,1X),F14.8)') c_ioncnt, c_iontype, delta_t
 
 ! Ion Diffusion Analysis
 
@@ -2316,8 +2319,8 @@ SUBROUTINE DIFF_COUNTERIONS()
 
   DO i = 0, nframes-1
 
-     WRITE(dumwrite,"(I10,1X,3(F14.5,1X))") i, gxarr(i),gyarr(i)&
-          &,gzarr(i)
+     WRITE(dumwrite,"(I10,1X,3(F14.5,1X))") tarr_lmp(i+1), gxarr(i)&
+          &,gyarr(i),gzarr(i)
 
   END DO
 
@@ -2902,6 +2905,14 @@ SUBROUTINE ALLOCATE_ANALYSIS_ARRAYS()
 
 ! Allocate for dynamics 
 
+  IF(ion_dynflag .OR. cion_dynflag .OR. pion_dynflag) THEN
+     ALLOCATE(tarr_lmp(nframes),stat = AllocateStatus)
+     IF(AllocateStatus/=0) STOP "did not allocate tarr_lmp"
+  ELSE
+     ALLOCATE(tarr_lmp(1),stat = AllocateStatus)
+     DEALLOCATE(tarr_lmp)
+  END IF
+  
   IF(ion_dynflag) THEN
      ALLOCATE(itrx_lmp(ioncnt,nframes),stat = AllocateStatus)
      IF(AllocateStatus/=0) STOP "did not allocate itrx_lmp"

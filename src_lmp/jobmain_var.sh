@@ -1,30 +1,34 @@
 #!/bin/bash
 
-#SBATCH -A chem
-#SBATCH -p burst
-#SBATCH --time=py_tottime:30:00
+#SBATCH --job-name py_jobname
 #SBATCH --nodes=py_nnodes
 #SBATCH --ntasks-per-node=py_ncores
-#SBATCH --mem=2G
-#SBATCH -J py_jobname
-#SBATCH -o out.%J
-#SBATCH -e err.%J
+#SBATCH --time=py_tottime:30:00
+#SBATCH --account=iontransport
+#SBATCH --error=std.err_%j
+#SBATCH --output=std.out_%j
+#SBATCH --partition py_partition
 
-module rm PE-intel
-module load PE-gnu
+# Load LAMMPS module
+module purge
+module use /nopt/nrel/apps/modules/centos77/modulefiles/
+module load mpich
+module load intel
+module load lammps//062322-intel-mpich
 
+# Change directory and signal job start
+cd $SLURM_SUBMIT_DIR
 echo "begin job.."
 echo $PWD
 
+# Create output directories
 mkdir -p outdir
 mkdir -p trajfiles
 
-mpirun -np py_nptot ./lmp_mpi -in in.init -e screen
+srun --mpi=pmi2 lmp -in in.init -e screen
 wait
-mpirun -np py_nptot ./lmp_mpi -in in.nve -e screen
+srun --mpi=pmi2 lmp -in in.nvt -e screen
 wait
-mpirun -np py_ntot ./lmp_mpi -in in.nvt -e screen
+srun --mpi=pmi2 lmp -in in.npt -e screen
 wait
-mpirun -np py_ntot ./lmp_mpi -in in.nvt_main -e screen
-wait
-mpirun -np py_nptot ./lmp_mpi -in in.npt -e screen
+srun --mpi=pmi2 lmp -in in.nvt_main -e screen

@@ -14,11 +14,12 @@ MODULE ANALYZE_PARAMS
   INTEGER :: nchains, atperchain
   INTEGER :: nproc
 
-  !Structural analysis averages/counters/inputs
+  !Structural adn dynamics analysis averages/counters/inputs
   INTEGER :: rdffreq,rmaxbin,npairs
   INTEGER :: rgfreq, rdfpaircnt
   REAL    :: rvolavg,rdomcut,rbinval,rvolval
   REAL    :: re2ave, re4ave, rg2ave, rg4ave, b2ave
+  REAL    :: delta_t
 
   !General required vars required for computing properties
   INTEGER :: npoly_types
@@ -83,6 +84,7 @@ MODULE ANALYZE_PARAMS
   INTEGER, ALLOCATABLE,DIMENSION(:) :: polboundarr,polfreearr
 
   !Required Arrays - Dynamic Quantities
+  INTEGER*8, ALLOCATABLE, DIMENSION(:) :: tarr_lmp
   REAL*8, ALLOCATABLE, DIMENSION(:,:) :: trx_lmp,try_lmp,trz_lmp
   REAL*8, ALLOCATABLE, DIMENSION(:,:) :: itrx_lmp,itry_lmp,itrz_lmp
   REAL*8, ALLOCATABLE, DIMENSION(:,:) :: ctrx_lmp,ctry_lmp,ctrz_lmp
