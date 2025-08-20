@@ -313,8 +313,19 @@ def return_neigh_arrays(simdir,strpref,colarr,nheaders=0,maxneigh=5):
     sarr,neigharr = extract_data(neigh_file,colarr,nheaders,maxneigh)
     return sarr,neigharr
 #------------------------------------------------------------------         
+def return_clust_arrays(simdir,strpref,colarr,nheaders=0,maxclust=20):
+    if len(colarr) != 2:
+        raise RuntimeError("Expecting 2 columns for plotting clusters")
+
+    neigh_file = find_latest_file(glob.glob(simdir + '/' + strpref + '*'))
+    if neigh_file == -1:
+        return -1
+
+    sarr,neigharr = extract_data(neigh_file,colarr,nheaders,maxclust)
+    return sarr,neigharr
+#------------------------------------------------------------------             
 def extract_data(filename,colarr,skipl=1,refnr=0):
-    data = np.loadtxt(filename, skiprows=skipl)  # Skips the first header line
+    data = np.loadtxt(filename, skiprows=skipl)  # Skips n header lines
     nrows = data.shape[0]
     if refnr == 0 or nrows < refnr:
         col1 = data[:, colarr[0]]  # Column 1
