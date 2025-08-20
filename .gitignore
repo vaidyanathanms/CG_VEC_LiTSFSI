@@ -12,3 +12,4 @@ src_lmp/jobmain_var.sh
 src_f90/lmp_input.dat
 src_lmp/*.sh
 src_f90/*.log
+src_matpy/*~
