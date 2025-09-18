@@ -17,6 +17,9 @@ import subprocess
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+import matplotlib.ticker as tck
+from matplotlib.ticker import LogFormatterSciNotation
+
 #------------------------------------------------------------------
 
 # General copy script
@@ -341,6 +344,18 @@ def find_latest_file(flist):
         return -1
     outfile = max(flist, key=os.path.getmtime)
     return outfile
+#------------------------------------------------------------------         
+def sci_mathtext(x, pos):
+    # format as $2\times10^{-12}$, $10^{-11}$, etc.
+    if x <= 0:
+        return ""
+    exp = int(np.floor(np.log10(x)))
+    coeff = x / 10**exp
+    if abs(coeff - 1.0) < 1e-12:
+        return rf"$10^{{{exp}}}$"
+    else:
+        # %g avoids trailing .0; switch to:.3g if you want fixed precision
+        return rf"${coeff:g}\times10^{{{exp}}}$"
 #------------------------------------------------------------------         
 # if __name__
 if __name__ == '__main__':

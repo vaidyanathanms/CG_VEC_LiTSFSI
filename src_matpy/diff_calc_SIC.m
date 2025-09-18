@@ -21,6 +21,8 @@ deltaT = dt.*savefreq;
 deg_pol = 40;
 nanion_pol = floor(deg_pol*fanions);
 maindirname = sprintf('../../new_results/qanion_%s',anion_charge);
+figdirname  = sprintf('../../figures');
+ion_plot_flag = 1 % 1: plot ion data ; 0: plot counterion data
 
 % Model y = Ax + B
 diff_model = @(x, p) (p(1) + p(2) * x);
@@ -36,13 +38,12 @@ fprintf(fout,'%s\t %s\t %s\t %s\t %s\t %s\t %s\t %s\t %s\t %s\n','System','f_an'
 for syscnt = 1:length(systems)
 
   printf('Analyzing system: %s \n', systems{syscnt});
-  figure
+  h = figure
   hold on
   box on
-  grid on
   leg_arr={};
-  xlabel('Time','FontSize',20)
-  ylabel('MSD','FontSize',20)
+  xlabel('Time (\tau)','FontSize',20)
+  ylabel('MSD (\sigma^2)','FontSize',20)
   set(gca, 'FontSize', 12)
 
   iondiff_arr  = zeros(length(fanions),1);
@@ -102,10 +103,18 @@ for syscnt = 1:length(systems)
     ciondiff_arr(fcnt,1) = pfit(2);
 
     % Plot data
-    plot(cxall,cyall,'color',clr_arr{fcnt},'LineWidth',2,'linestyle','--')
-    plot(cxfitdata,cfitted_data,'color',clr_arr{fcnt},'LineWidth',2,'linestyle','-');
-    leg_arr{2*fcnt-1} = ['Data f = ' num2str(fanions(fcnt))];
-    leg_arr{2*fcnt} = ['Fitdata f = ' num2str(fanions(fcnt))];
+    if ion_plot_flag
+      plot(ixall,iyall,'color',clr_arr{fcnt},'LineWidth',2,'linestyle','-')
+      plot(ixfitdata,ifitted_data,'color',clr_arr{fcnt},'LineWidth',2,'linestyle','--');
+      leg_arr{2*fcnt-1} = ['Data f = ' num2str(fanions(fcnt))];
+      leg_arr{2*fcnt} = ['Fitdata f = ' num2str(fanions(fcnt))];
+    else
+      plot(cxall,cyall,'color',clr_arr{fcnt},'LineWidth',2,'linestyle','-')
+      plot(cxfitdata,cfitted_data,'color',clr_arr{fcnt},'LineWidth',2,'linestyle','--');
+      leg_arr{2*fcnt-1} = ['Data f = ' num2str(fanions(fcnt))];
+      leg_arr{2*fcnt} = ['Fitdata f = ' num2str(fanions(fcnt))];
+    end
+
 
     % Compute transference number
 
@@ -120,6 +129,13 @@ for syscnt = 1:length(systems)
 
   end
   legend(leg_arr,'location','bestoutside')
+  if ~ion_plot_flag
+    set(gca,'yscale','log');
+    set(gca,'xscale','log');
+    saveas(h, sprintf('%s/counterion_%s_msd.png',figdirname,systems{syscnt}));
+  else
+    saveas(h, sprintf('%s/ion_%s_msd.png',figdirname,systems{syscnt}));
+  end
 
 end
 

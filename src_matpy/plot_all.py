@@ -5,12 +5,10 @@ import os
 import math
 import numpy as np
 import analyze_rdfs as ardf
-#import analyze_tacf as atcf
-#from compute_props import *
 import pandas as pd
 import aux_plot as paux
 from env_plot import *
-
+from matplotlib.ticker import FuncFormatter, LogLocator  # add these
 #---------------Directory paths-------------------------------------
 main_dir = os.getcwd() # current dir
 
@@ -31,14 +29,15 @@ if not os.path.isdir(figout_dir):
 syspref  = 'qanion_'
 respref  = 'allresults_'
 q_anion  = '0.2' # should be the exact string value
-sys_arr  = ['S3']
+sys_arr  = ['S3'] # Give one at a time
 fran_arr = ['0.05','0.09','0.20']
 f_unpoly = [0, 0.6, 0.6]
-deltat   = [0.006, 0.006, 0.006] 
-case_arr = [1]
+deltat   = [0.006, 0.006, 0.006]
+case_arr = [15]
 molwt    = 40
 nchains  = 100
-rho_tot  = 0.8
+S2_vol_tot  = [9926.68,9884.76,10032.43]
+S3_vol_tot  = [9856.87,9807.30,9809.80]               
 
 #---------File prefixes------------------------------------------
 rdf_pref     = 'rdf_config_'
@@ -51,15 +50,17 @@ bfrdf_pref   = 'freeboundrdf_config_'
 
 
 #---------Flags---------------------------------------------------
-rdf_flag     = 0; rdf_keys    = {'LiAn':3,'LiPoly':2}
+rdf_flag     = 0; rdf_keys    = {'LiAn':4,'LiPoly':3,'LiMon':7}
 rg_flag      = 0
 neigh_flag   = 0; neigh_keys  = {'Li-An':3,'An-Li':5}; maxneigh = 6
-clust_flag   = 0; clust_keys  = {'Li-An':2}
+clust_flag   = 1; clust_keys  = {'Li-An':2}
 bfrdf_flag   = 0
 restime_flag = 0; restime_keys = {'Li-An':2}
-simdiff_flag = 1 # Simulation diffusivities and transference numbers
+simdiff_flag = 0 # Simulation diffusivities and transference numbers
 expdiff_flag = 0 # Experimental diffusivities and transference numbers
+exppoly_flag = 0 # Experimental polymerization/unpolymerization data
 expcond_flag = 0 # Experimental conductivities
+exptnum_Ndep = 0 # Experimental dependence on transference numbers
 
 #---------Experimental inputs---------------------------------------
 fanfrac_values = [0.05, 0.11, 0.25]
@@ -74,8 +75,6 @@ nanions  = [nchains*int(molwt*float(x)) for x in fran_arr]
 npols    = [nchains*molwt - nanions[i]  for i in range(len(nanions))]
 totbeads = [int(2.0*(npols[i] + nanions[i])) for i in range(len(npols))]
 npol_ans = [int(0.5*float(x)) for x in npols]
-frho_an  = [rho_tot*(nanions[i]/totbeads[i]) for i in range(len(totbeads))]
-frho_pol = [rho_tot*(npol_ans[i]/totbeads[i]) for i in range(len(totbeads))]  
 
 #---------Initialize global arrays--------------------------------
 if restime_flag:
@@ -240,9 +239,9 @@ if(simdiff_flag):
     fig.savefig(f'{figout_dir}/tplus_scaledfN.png',dpi = fig.dpi)
     fig.savefig(f'{figout_dir}/tplus_scaledfN.eps',format = 'eps')
 
-if(expdiff_flag):
+if(exppoly_flag):
 
-    print ("Plotting experimental polymerization data")
+    print ("Plotting experimental (un)polymerization data")
     
     # Bar settings
     fanfrac_bar = np.arange(len(fanfrac_labels))  # the label locations
@@ -252,7 +251,7 @@ if(expdiff_flag):
     print("Unpolymerized polymer fraction data")
 
     #Categories and values
-    unpoly_values = [70.7, 60.9, 88.4]
+    unpoly_values = [0.707, 0.609, 0.884]
         
     fig, ax = plt.subplots()
     paux.set_axes(ax,plt,r'$f_{an}$',r'Unpolymerized Fraction')
@@ -260,7 +259,7 @@ if(expdiff_flag):
     ax.bar(fanfrac_bar, unpoly_values, bar_width,color='skyblue',edgecolor='black')
         
     # Labels, legend, and formatting
-    ax.set_ylim([0.6, 1])
+    ax.set_ylim([0.5, 1])
     ax.set_xticks(fanfrac_bar)
     ax.set_xticklabels(fanfrac_labels)
     fig.savefig(f'{figout_dir}/unpoly_expdata.png',dpi = fig.dpi)
@@ -291,7 +290,7 @@ if(expdiff_flag):
     fig.savefig(f'{figout_dir}/dli_expdata.eps',format = 'eps')
 
     #----------Counterion diffusivity-----------------------------------
-    print("Counterion counterion diffusivity data")
+    print("Counterion unaveraged diffusivity data")
     #Categories and values
     dstfsiexp_values = [1.55E-11,3.60E-13,3.44E-13]
     
@@ -307,7 +306,7 @@ if(expdiff_flag):
     fig.savefig(f'{figout_dir}/dstfsi_expdata.eps',format = 'eps')
 
     #----------Avged Counterion diffusivity-----------------------------------
-    print("Counterion AVERAGED counterion diffusivity data")
+    print("Counterion AVERAGED diffusivity data")
     #Categories and values
     
     f1 = np.array([0.933, 0.917, 0.854])
@@ -329,7 +328,7 @@ if(expdiff_flag):
     fig.savefig(f'{figout_dir}/avgdstfsi_expdata.png',dpi = fig.dpi)
     fig.savefig(f'{figout_dir}/avgdstfsi_expdata.eps',format = 'eps')
 
-    # Combined diffusivities (lithium and averaged anion diffusivities)
+    #-----Combined diffusivities (lithium and averaged anion diffusivities)--------------
 
     fig, ax = plt.subplots()
     paux.set_axes(ax,plt,r'$f_{an}$',r'Diffusion Coefficients (m$^2$/s)')
@@ -338,12 +337,14 @@ if(expdiff_flag):
     bwidth = 0.35
     rects1 = ax.bar(fanfrac_bar - bwidth/2, dliexp_values, bwidth, label="D$_{Li^{+}}$")
     rects2 = ax.bar(fanfrac_bar + bwidth/2, dstfsiavgexp_values, bwidth, label="D$_{STFSI^{-}}$")
-        
+    
     # Labels, legend, and formatting
     ax.set_xticks(fanfrac_bar)
     ax.set_xticklabels(fanfrac_labels)
     ax.set_yscale('log')
     ax.legend()
+    ax.set_yticks([5e-12, 1e-11, 5e-11])
+    ax.yaxis.set_major_formatter(FuncFormatter(paux.sci_mathtext))
     fig.savefig(f'{figout_dir}/combined_diff_expdata.png',dpi = fig.dpi)
     fig.savefig(f'{figout_dir}/combined_diff_expdata.eps',format = 'eps')
 
@@ -383,6 +384,44 @@ if(expdiff_flag):
     fig.savefig(f'{figout_dir}/tlizfNexpavg_data.png',dpi = fig.dpi)
     fig.savefig(f'{figout_dir}/tlizfNexpavg_data.eps',format = 'eps')
 
+if(exptnum_Ndep):
+
+    print ("Plotting experimental transference number as a function of N")
+
+    # Nvalues
+    Ndeg_poly = np.array([1,40,75,100,500,1000])
+    
+    # Bar settings
+    N_barpos  = np.arange(len(Ndeg_poly))  # the label locations
+    n_series  = len(fanfrac_values)
+    bar_width = 0.8/n_series
+    
+    #Diffusivity values
+    dliexp_values = np.array([4.51E-11, 1.02E-11, 3.29E-12])
+
+    f1 = np.array([0.933, 0.917, 0.854])
+    f2 = 1-f1    
+    d1 = np.array([1.55E-11,3.60E-13,3.44E-13])
+    d2 = np.array([1.04E-12,1.64E-11,1.05E-11])
+    dstfsiavgexp_values = f1*d1 + f2*d2
+    
+    # Transference number as a function of N
+    fNalldp = Ndeg_poly.T.reshape(-1,1)*np.array(fanfrac_values).reshape(1,-1) # Transpose and convert to 2D for broadcasting
+    tzfNexp_values_set = dliexp_values/(dliexp_values + fNalldp*dstfsiavgexp_values)    
+
+    fig, ax = plt.subplots()
+    for j in range(len(fanfrac_values)):
+        ax.bar(N_barpos + (j - (n_series-1)/2)*bar_width, tzfNexp_values_set[:,j], bar_width,
+               label='$f_{an}$ = ' + fanfrac_labels[j])
+    
+    # Labels, legend, and formatting
+    paux.set_axes(ax,plt,r'$N$',r'$t_{+}$')
+    ax.set_xticks(N_barpos)
+    ax.set_xticklabels([str(val) for val in Ndeg_poly.T])
+    ax.legend()
+    fig.savefig(f'{figout_dir}/exptnum_Ndep.png',dpi = fig.dpi)
+    fig.savefig(f'{figout_dir}/exptnum_Ndep.eps',format = 'eps')
+    
 
 if(expcond_flag):
 
@@ -395,7 +434,6 @@ if(expcond_flag):
     #----------Ion conductivity-----------------------------------
     # Plot data
     fig, ax = plt.subplots()
-    paux.set_axes(ax,plt,r'$n_{neigh}$',r'$f$($n_{neigh}$)')
     bar_width = 0.2
     
     all_data = np.zeros((maxneigh,len(fran_arr)+1))
@@ -464,9 +502,18 @@ for sysid,sysname in enumerate(sys_arr):
         raise RuntimeError("FATAL ERROR: " + sys_dir + " not found")
 
     for casenum in case_arr:
-               
+        casestr = str(casenum)
+
+        if casestr == 'S2':
+            frho_an  = [nanions[i]/S2_vol_tot[i] for i in range(len(totbeads))]
+            frho_pol = [npol_ans[i]/S2_vol_tot[i] for i in range(len(totbeads))]
+        else:
+            frho_an  = [nanions[i]/S3_vol_tot[i] for i in range(len(totbeads))]
+            frho_pol = [npol_ans[i]/S3_vol_tot[i] for i in range(len(totbeads))]
+
         if(rdf_flag):
-                
+
+            
             for cid, (rdfkey,colval) in enumerate(rdf_keys.items()):
 
                 # Plot data
@@ -499,8 +546,8 @@ for sysid,sysname in enumerate(sys_arr):
                 ax.set_xlim([0, 3.5])
                 ax.set_ylim([0, maxgr+1])
                 ax.legend()
-                fig.savefig(f'{figout_dir}/rdf_{sysname}_{rdfkey}.png',dpi = fig.dpi)
-                fig.savefig(f'{figout_dir}/rdf_{sysname}_{rdfkey}.eps',format = 'eps')
+                fig.savefig(f'{figout_dir}/rdf_{sysname}_{rdfkey}_{casestr}.png',dpi = fig.dpi)
+                fig.savefig(f'{figout_dir}/rdf_{sysname}_{rdfkey}_{casestr}.eps',format = 'eps')
 
         if(neigh_flag):
             
@@ -508,7 +555,7 @@ for sysid,sysname in enumerate(sys_arr):
 
                 # Plot data
                 fig, ax = plt.subplots()
-                paux.set_axes(ax,plt,r'$n_{neigh}$',r'$f$($n_{neigh}$)')
+                paux.set_axes(ax,plt,r'Anion neighbor size, $s$',r'$f_{\mathrm{agg}}(s)$')
                 bar_width = 0.2
                 
                 all_data = np.zeros((maxneigh,len(fran_arr)+1))
@@ -539,8 +586,9 @@ for sysid,sysname in enumerate(sys_arr):
                 xtick_centers = [r + bar_width / 2 for r in range(maxneigh+1)]
                 plt.xticks(xtick_centers, np.arange(0,maxneigh+1,1))
                 ax.legend()
-                fig.savefig(f'{figout_dir}/neigh_{sysname}_{neighkey}.png',dpi = fig.dpi)
-                fig.savefig(f'{figout_dir}/neigh_{sysname}_{neighkey}.eps',format = 'eps')
+                casestr 
+                fig.savefig(f'{figout_dir}/neigh_{sysname}_{neighkey}_{casestr}.png',dpi = fig.dpi)
+                fig.savefig(f'{figout_dir}/neigh_{sysname}_{neighkey}_{casestr}.eps',format = 'eps')
 
         if(clust_flag):
             
