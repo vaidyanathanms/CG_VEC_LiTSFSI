@@ -17,6 +17,9 @@ import subprocess
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+import matplotlib.ticker as tck
+from matplotlib.ticker import LogFormatterSciNotation
+
 #------------------------------------------------------------------
 
 # General copy script
@@ -313,8 +316,19 @@ def return_neigh_arrays(simdir,strpref,colarr,nheaders=0,maxneigh=5):
     sarr,neigharr = extract_data(neigh_file,colarr,nheaders,maxneigh)
     return sarr,neigharr
 #------------------------------------------------------------------         
+def return_clust_arrays(simdir,strpref,colarr,nheaders=0,maxclust=20):
+    if len(colarr) != 2:
+        raise RuntimeError("Expecting 2 columns for plotting clusters")
+
+    neigh_file = find_latest_file(glob.glob(simdir + '/' + strpref + '*'))
+    if neigh_file == -1:
+        return -1
+
+    sarr,neigharr = extract_data(neigh_file,colarr,nheaders,maxclust)
+    return sarr,neigharr
+#------------------------------------------------------------------             
 def extract_data(filename,colarr,skipl=1,refnr=0):
-    data = np.loadtxt(filename, skiprows=skipl)  # Skips the first header line
+    data = np.loadtxt(filename, skiprows=skipl)  # Skips n header lines
     nrows = data.shape[0]
     if refnr == 0 or nrows < refnr:
         col1 = data[:, colarr[0]]  # Column 1
@@ -330,6 +344,18 @@ def find_latest_file(flist):
         return -1
     outfile = max(flist, key=os.path.getmtime)
     return outfile
+#------------------------------------------------------------------         
+def sci_mathtext(x, pos):
+    # format as $2\times10^{-12}$, $10^{-11}$, etc.
+    if x <= 0:
+        return ""
+    exp = int(np.floor(np.log10(x)))
+    coeff = x / 10**exp
+    if abs(coeff - 1.0) < 1e-12:
+        return rf"$10^{{{exp}}}$"
+    else:
+        # %g avoids trailing .0; switch to:.3g if you want fixed precision
+        return rf"${coeff:g}\times10^{{{exp}}}$"
 #------------------------------------------------------------------         
 # if __name__
 if __name__ == '__main__':
