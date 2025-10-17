@@ -29,7 +29,7 @@ if not os.path.isdir(figout_dir):
 syspref  = 'qanion_'
 respref  = 'allresults_'
 q_anion  = '0.2' # should be the exact string value
-sys_arr  = ['S3'] # Give one at a time
+sys_arr  = ['S2'] # Give one at a time
 fran_arr = ['0.05','0.09','0.20']
 f_unpoly = [0, 0.6, 0.6]
 deltat   = [0.006, 0.006, 0.006]
@@ -53,10 +53,10 @@ bfrdf_pref   = 'freeboundrdf_config_'
 rdf_flag     = 0; rdf_keys    = {'LiAn':4,'LiPoly':3,'LiMon':7}
 rg_flag      = 0
 neigh_flag   = 0; neigh_keys  = {'Li-An':3,'An-Li':5}; maxneigh = 6
-clust_flag   = 1; clust_keys  = {'Li-An':2}
+clust_flag   = 0; clust_keys  = {'Li-An':2}
 bfrdf_flag   = 0
 restime_flag = 0; restime_keys = {'Li-An':2}
-simdiff_flag = 0 # Simulation diffusivities and transference numbers
+simdiff_flag = 1 # Simulation diffusivities and transference numbers
 expdiff_flag = 0 # Experimental diffusivities and transference numbers
 exppoly_flag = 0 # Experimental polymerization/unpolymerization data
 expcond_flag = 0 # Experimental conductivities
@@ -150,6 +150,30 @@ if(simdiff_flag):
     x = np.arange(len(lipivot.index))  # the label locations
     bar_width = 0.2
 
+    #------------Plotting cation and anion stacked-------------------
+    print("Plotting stacked cation and anion data...")
+    fig, ax = plt.subplots()
+    paux.set_axes(ax,plt,r'Model',r'Diffusion Coefficient (${\sigma^2}/{\tau}$)')
+    for i, label in enumerate(lipivot.columns):
+        bars = ax.bar(x + i * bar_width, lipivot[label],width = bar_width,\
+                      label='$D_{Li^{+}}$, $f_{an}$ = ' + str(label),color=clr_arr[i])
+
+
+    for i, label in enumerate(stfsipivot.columns):
+        bars = ax.bar(x + i * bar_width, stfsipivot[label],width = bar_width,\
+                      label='$D_{STFSI^{-}}$, $f_{an}$ = ' + str(label),color=clr_arr[i],\
+                      hatch='//', edgecolor='black', fill=False)
+
+    ax.set_xticks(x + bar_width)
+    ax.set_xticklabels(stfsipivot.index)
+    ax.set_ylim([0, 0.06])
+#    ax.legend(loc='upper center', ncol=3, frameon=False)
+#    ax.tick_params(axis='x',pad=40)
+    ax.legend()
+    fig.savefig(f'{figout_dir}/diff_all_stacked.png',dpi = fig.dpi)
+    fig.savefig(f'{figout_dir}/diff_all_stacked.eps',format = 'eps')
+
+    
     #--------------Plotting ion-diffusivity------------------
     print("Plotting ion-diffusivity")    
     fig, ax = plt.subplots()
@@ -239,6 +263,7 @@ if(simdiff_flag):
     fig.savefig(f'{figout_dir}/tplus_scaledfN.png',dpi = fig.dpi)
     fig.savefig(f'{figout_dir}/tplus_scaledfN.eps',format = 'eps')
 
+    
 if(exppoly_flag):
 
     print ("Plotting experimental (un)polymerization data")
@@ -555,7 +580,7 @@ for sysid,sysname in enumerate(sys_arr):
 
                 # Plot data
                 fig, ax = plt.subplots()
-                paux.set_axes(ax,plt,r'Anion neighbor size, $s$',r'$f_{\mathrm{agg}}(s)$')
+                paux.set_axes(ax,plt,r'Anion neighbor size, $s$',r'$f_{\mathrm{neigh}}(s)$')
                 bar_width = 0.2
                 
                 all_data = np.zeros((maxneigh,len(fran_arr)+1))
@@ -593,11 +618,16 @@ for sysid,sysname in enumerate(sys_arr):
         if(clust_flag):
             
             for nid, (clustkey,colval) in enumerate(clust_keys.items()):
+
+                bar_width = 0.2
+                maxclust = 1600
+                
                 # Plot data
                 fig, ax = plt.subplots()
-                paux.set_axes(ax,plt,r'$C_{size}$',r'$f$($C_{size}$)')
-                bar_width = 0.2
-                maxclust = 1600 
+                paux.set_axes(ax,plt,r'Cluster size, $s$',r'$H$($s$)')
+
+                fig2, ax2 = plt.subplots()
+                paux.set_axes(ax,plt,r'Cluster size, $s$',r'$H$($s$)')
                 
                 for fr_id, frac_an in enumerate(fran_arr):
 
@@ -615,16 +645,25 @@ for sysid,sysname in enumerate(sys_arr):
 
                     ax.bar(xarr+fr_id*bar_width,yarr,bar_width,\
                            label='$f_{an}$ = ' + fran_arr[fr_id],color=clr_arr[fr_id])
+                    ax2.bar(xarr+fr_id*bar_width,yarr,bar_width,\
+                            label='$f_{an}$ = ' + fran_arr[fr_id],color=clr_arr[fr_id])
                     
                 
-                ax.set_xlim([1, 10])
-                #ax.set_ylim([0, 0.02])
-                xtick_centers = [r + bar_width / 2 for r in range(1,10,1)] #maxclust+1,100)]
-                plt.xticks(xtick_centers, np.arange(1,10,1))#np.arange(1300,maxclust+1,100))
+                xtick_centers = [r + bar_width / 2 for r in range(1,10,1)] 
+                ax.set_xlim([0.5, 10])
+                plt.xticks(xtick_centers, np.arange(1,10,1))
                 ax.legend()
-                fig.savefig(f'{figout_dir}/clust_{sysname}_{clustkey}.png',dpi = fig.dpi)
-                fig.savefig(f'{figout_dir}/clust_{sysname}_{clustkey}.eps',format = 'eps')
+                fig.savefig(f'{figout_dir}/clust_{sysname}_{clustkey}_{casestr}.png',dpi = fig.dpi)
+                fig.savefig(f'{figout_dir}/clust_{sysname}_{clustkey}_{casestr}.eps',format = 'eps')
 
+                xtick_centers = [r + bar_width / 2 for r in range(1300,maxclust+1,100)]
+                ax2.set_xlim([1300, maxclust+5])
+                ax2.set_ylim([0, 0.02])
+                plt.xticks(xtick_centers, np.arange(1300,maxclust+1,100))
+                ax2.legend()
+                fig2.savefig(f'{figout_dir}/clustinset_{sysname}_{clustkey}_{casestr}.png',dpi = fig.dpi)
+                fig2.savefig(f'{figout_dir}/clustinset_{sysname}_{clustkey}_{casestr}.eps',format = 'eps')
+                
         if(restime_flag):
             
             # Plot data
