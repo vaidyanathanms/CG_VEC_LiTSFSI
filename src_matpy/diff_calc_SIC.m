@@ -7,17 +7,33 @@ clr_arr      = {'g','b','r','m'};
 
 %% Inputs
 anion_charge = '0.2' % Exact value in string
+%systems = {'S1','S2','S3'};
 systems = {'S1','S2','S3'};
 fanions = [0.05; 0.09; 0.20];
 fanion_str = {'0.05'; '0.09'; '0.20'}; % exact string version of fanions
-casenum = 1; % Do one case # at a time
-dt = [0.005, 0.006, 0.006;
-0.005, 0.006, 0.006;
-0.006, 0.003, 0.005];
-savefreq = [2500, 2500, 2500;
-2500, 2500, 2500;
-2500, 2500, 2500];
-deltaT = dt.*savefreq;
+casenum = 15; % Do one case # at a time
+
+%CASE-1
+if casenum == 1
+  dt = [0.005, 0.006, 0.006;
+  0.005, 0.006, 0.006;
+  0.006, 0.003, 0.005];
+elseif casenum == 15
+  dt = [0.004, 0.006, 0.006;
+  0.005, 0.006, 0.006;
+  0.005, 0.005, 0.005];
+
+  %  dt = [0.005, 0.006, 0.006;
+  %  0.005, 0.006, 0.006;
+  %  0.005, 0.005, 0.00];
+
+end
+
+% CASE-15
+%savefreq = [2500, 2500, 2500;
+%2500, 2500, 2500;
+%2500, 2500, 2500];
+deltaT = dt; %.*savefreq;
 deg_pol = 40;
 nanion_pol = floor(deg_pol*fanions);
 maindirname = sprintf('../../new_results/qanion_%s',anion_charge);
@@ -30,24 +46,26 @@ p0 = [1, 0.1];
 
 % Write output to file
 fout = fopen(sprintf('../../analyzed_results/computed_diffusivity_%g.dat',casenum),'w');
-fprintf(fout,'%s\t %s\t %s\t %s\t %s\t %s\t %s\t %s\t %s\t %s\n','System','f_an', ...
-'Case #','Traj_#', 'Timestep','deltaT','D_Li','D_STFSI','t_Li (z = 1)', 't_Li (t = f_an * N)')
+fprintf(fout,'%s\t %s\t %s\t %s\t %s\t %s\t %s\t %s\t %s\t %s\t %s\t %s\n','System','f_an', ...
+'Case #','Traj_#', 'Timestep','deltaT','D_Li','D_STFSI','t_Li (z = 1)', 't_Li (t = f_an * N)','Li Power','TFSI Power')
 
 
-% Load Diffusivity files
+% Load Diffusivity filesio
 for syscnt = 1:length(systems)
 
   printf('Analyzing system: %s \n', systems{syscnt});
-  h = figure
-  hold on
-  box on
+  h = figure;
+  hold on;
+  box on;
   leg_arr={};
-  xlabel('Time (\tau)','FontSize',20)
-  ylabel('MSD (\sigma^2)','FontSize',20)
-  set(gca, 'FontSize', 12)
+  xlabel('Time (\tau)','FontSize',20);
+  ylabel('MSD (\sigma^2)','FontSize',20);
+  set(gca, 'FontSize', 12);
 
   iondiff_arr  = zeros(length(fanions),1);
   ciondiff_arr  = zeros(length(fanions),1);
+  ionslope_arr  = zeros(length(fanions),1);
+  cionslope_arr  = zeros(length(fanions),1);
 
   for fcnt = 1:length(fanions)
 
@@ -82,25 +100,39 @@ for syscnt = 1:length(systems)
 
     % File parameters
     lendata = length(ion_diff_arr(:,1));
-    fit_start = floor(0.1*lendata); fit_end = floor(0.5*lendata);
+    fit_start = floor(0.2*lendata); fit_end = floor(0.7*lendata);
 
     % Fit ion-diffusivity using least squares
-    ixall = ion_diff_arr(:,1)*deltaT(syscnt,fcnt);
+    ixall = (ion_diff_arr(:,1)-ion_diff_arr(1,1))*deltaT(syscnt,fcnt); % subtract the first value
     iyall = 1/6*(ion_diff_arr(:,2) + ion_diff_arr(:,3) + ion_diff_arr(:,4));
-    ixfitdata = ion_diff_arr(fit_start:fit_end,1)*deltaT(syscnt,fcnt);
-    iyfitdata = 1/6*(ion_diff_arr(fit_start:fit_end,2) + ion_diff_arr(fit_start:fit_end,3) + ion_diff_arr(fit_start:fit_end,4));
+%    max(iyall)
+    ixfitdata = ixall(fit_start:fit_end,1); %ion_diff_arr(fit_start:fit_end,1)*deltaT(syscnt,fcnt);
+    iyfitdata = iyall(fit_start:fit_end,1); %1/6*(ion_diff_arr(fit_start:fit_end,2) + ion_diff_arr(fit_start:fit_end,3) + ion_diff_arr(fit_start:fit_end,4));
     [f,pfit,~,~] = leasqr(ixfitdata, iyfitdata, p0, diff_model);
     ifitted_data = pfit(1) + pfit(2)*ixfitdata;
     iondiff_arr(fcnt,1) = pfit(2);
 
     % Fit counterion diffusivity using least squares
-    cxall = cion_diff_arr(:,1)*deltaT(syscnt,fcnt);
+    cxall = (cion_diff_arr(:,1)-cion_diff_arr(1,1))*deltaT(syscnt,fcnt);
     cyall = 1/6*(cion_diff_arr(:,2) + cion_diff_arr(:,3) + cion_diff_arr(:,4));
-    cxfitdata = cion_diff_arr(fit_start:fit_end,1)*deltaT(syscnt,fcnt);
-    cyfitdata = 1/6*(cion_diff_arr(fit_start:fit_end,2) + cion_diff_arr(fit_start:fit_end,3) + cion_diff_arr(fit_start:fit_end,4));
+    cxfitdata = cxall(fit_start:fit_end,1); %cion_diff_arr(fit_start:fit_end,1)*deltaT(syscnt,fcnt);
+    cyfitdata = cyall(fit_start:fit_end,1); %1/6*(cion_diff_arr(fit_start:fit_end,2) + cion_diff_arr(fit_start:fit_end,3) + cion_diff_arr(fit_start:fit_end,4));
     [f,pfit,~,~] = leasqr(cxfitdata, cyfitdata, p0, diff_model);
     cfitted_data = pfit(1) + pfit(2)*cxfitdata;
     ciondiff_arr(fcnt,1) = pfit(2);
+
+    % Find coefficient
+    ilogx = log(ixfitdata);
+    ilogy = log(iyfitdata);
+    [f,pfit,~,~] = leasqr(ilogx, ilogy, p0, diff_model);
+    ionslope_arr(fcnt,1) = pfit(2);
+
+
+    clogx = log(cxfitdata);
+    clogy = log(cyfitdata);
+    [f,pfit,~,~] = leasqr(clogx, clogy, p0, diff_model);
+    cionslope_arr(fcnt,1) = pfit(2);
+
 
     % Plot data
     if ion_plot_flag
@@ -123,18 +155,21 @@ for syscnt = 1:length(systems)
 
 
     % Write to file
-    fprintf(fout,'%s\t %s\t %d\t %s\t %g\t %g\t %g\t %g\t %g\t %g\n', systems{syscnt}, ....
-    fanion_str{fcnt,1}, casenum, ion_latest_file, dt(syscnt,fcnt),deltaT(syscnt,fcnt),iondiff_arr(fcnt,1),ciondiff_arr(fcnt,1),t1,t2)
+    fprintf(fout,'%s\t %s\t %d\t %s\t %g\t %g\t %g\t %g\t %g\t %g\t %g\t %g\n', systems{syscnt}, ....
+    fanion_str{fcnt,1}, casenum, ion_latest_file, dt(syscnt,fcnt),deltaT(syscnt,fcnt),...
+    iondiff_arr(fcnt,1),ciondiff_arr(fcnt,1),t1,t2,ionslope_arr(fcnt,1),cionslope_arr(fcnt,1))
 
 
   end
-  legend(leg_arr,'location','bestoutside')
+
+  legend(leg_arr,'location','bestoutside');
+
   if ~ion_plot_flag
     set(gca,'yscale','log');
     set(gca,'xscale','log');
-    saveas(h, sprintf('%s/counterion_%s_msd.png',figdirname,systems{syscnt}));
+    saveas(h, sprintf('%s/counterion_%s_%d_msd.png',figdirname,systems{syscnt},casenum));
   else
-    saveas(h, sprintf('%s/ion_%s_msd.png',figdirname,systems{syscnt}));
+    saveas(h, sprintf('%s/ion_%s_%d_msd.png',figdirname,systems{syscnt},casenum));
   end
 
 end
