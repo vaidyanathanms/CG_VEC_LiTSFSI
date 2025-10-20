@@ -29,7 +29,7 @@ if not os.path.isdir(figout_dir):
 syspref  = 'qanion_'
 respref  = 'allresults_'
 q_anion  = '0.2' # should be the exact string value
-sys_arr  = ['S2'] # Give one at a time
+sys_arr  = ['S1'] # Give one at a time
 fran_arr = ['0.05','0.09','0.20']
 f_unpoly = [0, 0.6, 0.6]
 deltat   = [0.006, 0.006, 0.006]
@@ -111,11 +111,12 @@ if(simdiff_flag):
 
     column_names = [
         "System", "f_an", "Case#", "Traj_#", "Timestep", "deltaT", "D_Li", "D_STFSI", 
-        "t_Li_z=1", "t_Li_t=f_an*N"
+        "t_Li_z=1", "t_Li_t=f_an*N", "Li_Power", "TFSI_Power"
     ]
 
     # Load the data into a DataFrame
-    df = pd.read_csv('../../analyzed_results/computed_diffusivity_1.dat', sep="\t", skipinitialspace=True)
+    df = pd.read_csv('../../analyzed_results/computed_diffusivity_' + \
+                     str(case_arr[0]) + '.dat', sep="\t", skipinitialspace=True)
     df.columns = column_names
 
     # Extract relevant columns and ensure correct datatypes
@@ -170,8 +171,8 @@ if(simdiff_flag):
 #    ax.legend(loc='upper center', ncol=3, frameon=False)
 #    ax.tick_params(axis='x',pad=40)
     ax.legend()
-    fig.savefig(f'{figout_dir}/diff_all_stacked.png',dpi = fig.dpi)
-    fig.savefig(f'{figout_dir}/diff_all_stacked.eps',format = 'eps')
+    fig.savefig(f'{figout_dir}/diff_all_stacked_case' + str(case_arr[0]) + '.png',dpi = fig.dpi)
+    fig.savefig(f'{figout_dir}/diff_all_stacked_case' + str(case_arr[0]) + '.eps',format = 'eps')
 
     
     #--------------Plotting ion-diffusivity------------------
@@ -195,8 +196,8 @@ if(simdiff_flag):
     ax.set_xticklabels(lipivot.index)
     ax.tick_params(axis='x',pad=20)
     ax.legend()
-    fig.savefig(f'{figout_dir}/diff_ion.png',dpi = fig.dpi)
-    fig.savefig(f'{figout_dir}/diff_ion.eps',format = 'eps')
+    fig.savefig(f'{figout_dir}/diff_ion_case' + str(case_arr[0]) + '.png',dpi = fig.dpi)
+    fig.savefig(f'{figout_dir}/diff_ion_case' + str(case_arr[0]) + '.eps',format = 'eps')
 
     #--------Plotting counter-ion-diffusivity------------------
     print("Plotting counter-ion diffusivity")    
@@ -219,8 +220,8 @@ if(simdiff_flag):
     ax.set_xticklabels(stfsipivot.index)
     ax.set_yscale('log')
     ax.legend()
-    fig.savefig(f'{figout_dir}/diff_countion.png',dpi = fig.dpi)
-    fig.savefig(f'{figout_dir}/diff_countion.eps',format = 'eps')
+    fig.savefig(f'{figout_dir}/diff_countion_case' + str(case_arr[0]) + '.png',dpi = fig.dpi)
+    fig.savefig(f'{figout_dir}/diff_countion_case' + str(case_arr[0]) + '.eps',format = 'eps')
 
     #--------Plotting Transference Number (z = 1) --------------------
     print("Plotting transference number (z=1)")    
@@ -242,8 +243,8 @@ if(simdiff_flag):
     ax.set_xticks(x + bar_width)
     ax.set_xticklabels(tz1lipivot.index)
     ax.legend()
-    fig.savefig(f'{figout_dir}/tplus.png',dpi = fig.dpi)
-    fig.savefig(f'{figout_dir}/tplus.eps',format = 'eps')
+    fig.savefig(f'{figout_dir}/tplus_case' + str(case_arr[0]) + '.png',dpi = fig.dpi)
+    fig.savefig(f'{figout_dir}/tplus_case' + str(case_arr[0]) + '.eps',format = 'eps')
 
     #--------Plotting Transference Number (z = fN) --------------------
     print("Plotting transference number (z = fN)")    
@@ -260,8 +261,8 @@ if(simdiff_flag):
     ax.set_xticks(x + bar_width)
     ax.set_xticklabels(tzfNlipivot.index)
     ax.legend()
-    fig.savefig(f'{figout_dir}/tplus_scaledfN.png',dpi = fig.dpi)
-    fig.savefig(f'{figout_dir}/tplus_scaledfN.eps',format = 'eps')
+    fig.savefig(f'{figout_dir}/tplus_scaledfN_case' + str(case_arr[0]) + '.png',dpi = fig.dpi)
+    fig.savefig(f'{figout_dir}/tplus_scaledfN_case' + str(case_arr[0]) + '.eps',format = 'eps')
 
     
 if(exppoly_flag):

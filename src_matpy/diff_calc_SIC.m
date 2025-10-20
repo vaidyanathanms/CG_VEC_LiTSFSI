@@ -7,8 +7,8 @@ clr_arr      = {'g','b','r','m'};
 
 %% Inputs
 anion_charge = '0.2' % Exact value in string
-%systems = {'S1','S2','S3'};
 systems = {'S1','S2','S3'};
+%systems = {'S1'};
 fanions = [0.05; 0.09; 0.20];
 fanion_str = {'0.05'; '0.09'; '0.20'}; % exact string version of fanions
 casenum = 15; % Do one case # at a time
@@ -38,7 +38,7 @@ deg_pol = 40;
 nanion_pol = floor(deg_pol*fanions);
 maindirname = sprintf('../../new_results/qanion_%s',anion_charge);
 figdirname  = sprintf('../../figures');
-ion_plot_flag = 1 % 1: plot ion data ; 0: plot counterion data
+ion_plot_flag = 1;% 1: plot ion data ; 0: plot counterion data
 
 % Model y = Ax + B
 diff_model = @(x, p) (p(1) + p(2) * x);
@@ -47,7 +47,7 @@ p0 = [1, 0.1];
 % Write output to file
 fout = fopen(sprintf('../../analyzed_results/computed_diffusivity_%g.dat',casenum),'w');
 fprintf(fout,'%s\t %s\t %s\t %s\t %s\t %s\t %s\t %s\t %s\t %s\t %s\t %s\n','System','f_an', ...
-'Case #','Traj_#', 'Timestep','deltaT','D_Li','D_STFSI','t_Li (z = 1)', 't_Li (t = f_an * N)','Li Power','TFSI Power')
+'Case #','Traj_#', 'Timestep','deltaT','D_Li','D_STFSI','t_Li (z = 1)', 't_Li (t = f_an * N)','Li_Power','TFSI_Power')
 
 
 % Load Diffusivity filesio
@@ -60,7 +60,7 @@ for syscnt = 1:length(systems)
   leg_arr={};
   xlabel('Time (\tau)','FontSize',20);
   ylabel('MSD (\sigma^2)','FontSize',20);
-  set(gca, 'FontSize', 12);
+  set(gca, 'FontSize', 16);
 
   iondiff_arr  = zeros(length(fanions),1);
   ciondiff_arr  = zeros(length(fanions),1);
@@ -100,12 +100,17 @@ for syscnt = 1:length(systems)
 
     % File parameters
     lendata = length(ion_diff_arr(:,1));
-    fit_start = floor(0.2*lendata); fit_end = floor(0.7*lendata);
+    if syscnt ~=3
+      fit_start = floor(0.3*lendata); fit_end = floor(0.7*lendata);
+    else
+      fit_start = floor(0.1*lendata); fit_end = floor(0.6*lendata);
+    end
+
+
 
     % Fit ion-diffusivity using least squares
     ixall = (ion_diff_arr(:,1)-ion_diff_arr(1,1))*deltaT(syscnt,fcnt); % subtract the first value
     iyall = 1/6*(ion_diff_arr(:,2) + ion_diff_arr(:,3) + ion_diff_arr(:,4));
-%    max(iyall)
     ixfitdata = ixall(fit_start:fit_end,1); %ion_diff_arr(fit_start:fit_end,1)*deltaT(syscnt,fcnt);
     iyfitdata = iyall(fit_start:fit_end,1); %1/6*(ion_diff_arr(fit_start:fit_end,2) + ion_diff_arr(fit_start:fit_end,3) + ion_diff_arr(fit_start:fit_end,4));
     [f,pfit,~,~] = leasqr(ixfitdata, iyfitdata, p0, diff_model);
@@ -142,9 +147,9 @@ for syscnt = 1:length(systems)
       leg_arr{2*fcnt} = ['Fitdata f = ' num2str(fanions(fcnt))];
     else
       plot(cxall,cyall,'color',clr_arr{fcnt},'LineWidth',2,'linestyle','-')
-      plot(cxfitdata,cfitted_data,'color',clr_arr{fcnt},'LineWidth',2,'linestyle','--');
-      leg_arr{2*fcnt-1} = ['Data f = ' num2str(fanions(fcnt))];
-      leg_arr{2*fcnt} = ['Fitdata f = ' num2str(fanions(fcnt))];
+      plot(cxfitdata,cfitted_data,'color',clr_arr{fcnt},'LineWidth',1,'linestyle','--');
+      leg_arr{2*fcnt-1} = ['Data, f = ' num2str(fanions(fcnt))];
+      leg_arr{2*fcnt} = ['Fit, f = ' num2str(fanions(fcnt))];
     end
 
 
@@ -162,14 +167,17 @@ for syscnt = 1:length(systems)
 
   end
 
-  legend(leg_arr,'location','bestoutside');
-
   if ~ion_plot_flag
+
     set(gca,'yscale','log');
     set(gca,'xscale','log');
+    legend(leg_arr,'location','southeast');
     saveas(h, sprintf('%s/counterion_%s_%d_msd.png',figdirname,systems{syscnt},casenum));
+
   else
+    legend(leg_arr,'location','northwest');
     saveas(h, sprintf('%s/ion_%s_%d_msd.png',figdirname,systems{syscnt},casenum));
+
   end
 
 end
