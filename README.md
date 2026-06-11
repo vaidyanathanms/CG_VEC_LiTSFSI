@@ -47,3 +47,9 @@ Step-3: Run using
 ./ana.o anainp.txt
 ```
 
+# Citation
+Please cite this paper if you found the codes or analysis scripts here useful.
+
+[Understanding the Influence of Chain Architecture on the Transport Quantities of Polymer Electrolytes with Covalently Bonded Anions] (https://pubs.acs.org/doi/full/10.1021/acsaem.5c03346)
+ACS Appl. Energy Mater. 2026, 9, 2, 1045–1057
+
