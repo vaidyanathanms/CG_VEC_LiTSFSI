@@ -1,16 +1,16 @@
-# Coarse-Grained Simulation Codes for Single-Ion Conducting Polymer Models
+# Coarse-Grained Simulations for Different Chain Archtitecures in Single-Ion Conducting Polymers
 
-Files to do CG simulations of VEC-LiSTSFI.
+Simulation files pertaining to the publication: Understanding the Influence of Chain Architecture on the Transport Quantities of Polymer Electrolytes with Covalently Bonded Anions, ACS Appl. Energy Mater. 2026, 9, 2, 1045–1057 [ACS Applied Energy Materials](https://pubs.acs.org/doi/full/10.1021/acsaem.5c03346)
 
 ## Required depedencies/software
 
-- Python3.x
+- Python3.x (Workflow for generating initial conditions by calling the FORTRAN and VMD codes and analyze LAMMPS trajectories)
 
-- VMD-1.9.4
+- VMD-1.9.4 (For generating angle information)
 
-- Fortran
+- Fortran (Generates initial configurations - this can be called from the Python wrapper code)
 
-- LAMMPS
+- LAMMPS (Generates trajectories)
 
 ## Systems possible
 
